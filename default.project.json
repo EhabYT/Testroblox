@@ -1,0 +1,23 @@
+{
+  "name": "atlas-ui",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Atlas": {
+        "$path": "src/Atlas"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$path": "src/StarterPlayerScripts"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "ConfigSync": {
+        "$path": "src/ServerScriptService/ConfigSync.server.lua"
+      }
+    }
+  }
+}
