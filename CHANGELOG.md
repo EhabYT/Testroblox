@@ -2,6 +2,18 @@
 
 All notable changes to atlas-ui are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.14.0] — 2026-08-02
+
+### Added
+- **Switch component**: `CreateSwitch{ Title, OnText, OffText, Default, Flag, Callback }` — a labeled two-state control with a sliding indicator and custom text for each state (e.g. "PvP"/"PvE", "On"/"Off"), distinct from Toggle's silent pill
+- **TextArea component**: `CreateTextArea{ Title, Placeholder, Height, MaxLength, Flag, Callback }` — multi-line text input with word wrap, configurable height, and optional live character counter with enforcement
+- **RangeSlider component**: `CreateRangeSlider{ Title, Min, Max, Step, DefaultMin, DefaultMax, Suffix, Flag, Callback }` — dual-thumb slider for selecting a min/max range; click proximity determines which knob moves; callback receives `(lo, hi)`
+- **RadioGroup component**: `CreateRadioGroup{ Title, Options, Default, Flag, Callback }` — vertical exclusive radio buttons with animated inner-dot selection, visually distinct from the horizontal Segmented control
+- **Keyboard shortcuts service**: `Atlas:AddShortcut{ Keys, Name, Callback }` — register global modifier+key combos (e.g. `{ Enum.KeyCode.LeftControl, Enum.KeyCode.S }`); returns a handle with `:Disconnect()` and `:SetEnabled(on)`; `Atlas:GetShortcuts()` lists active bindings
+- **Status bar service**: `Atlas:SetStatusBar{ Text, Accent, Visible }` — persistent bottom-edge strip with optional accent dot indicator, theme-bound; `Atlas:SetStatusBarText(s)` and `Atlas:SetStatusBarVisible(on)` for live updates
+- Demo: new **Components** tab showcasing all five new components plus the shortcut and status bar services; Ctrl+D toggles the status bar, Ctrl+N sends a test notification, Ctrl+S quick-saves; registry stats now include shortcut count
+- Demo: context-menu "Jump to Tab" submenu includes the new Components tab
+
 ## [2.13.0] — 2026-08-01
 
 ### Added

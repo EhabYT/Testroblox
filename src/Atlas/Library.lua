@@ -20,7 +20,7 @@ local Device = require(script.Parent.Device)
 --------------------------------------------------------------------
 
 local Library = {
-	VERSION = "2.13.0",
+	VERSION = "2.14.0",
 	Theme = Theme,
 	Utility = Utility,
 	Device = Device,
@@ -3685,6 +3685,695 @@ function Section:CreateColorPicker(config)
 	Library:_registerFlag(config.Flag, handle)
 	applyAll(false)
 	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: Switch (labeled on/off — shows custom text per state)
+--------------------------------------------------------------------
+
+function Section:CreateSwitch(config)
+	config = config or {}
+	local state = config.Default == true
+	local onText = config.OnText or "On"
+	local offText = config.OffText or "Off"
+
+	local row = sectionRow(self, 34)
+	rowLabel(row, config.Title or "Switch", 130)
+
+	local group = Create("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.new(0, 120, 0, 24),
+		BackgroundColor3 = token("Surface"),
+		BorderSizePixel = 0,
+		Parent = row,
+	}, {
+		Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Create("UIStroke", {
+			Thickness = 1, Color = token("Stroke"),
+			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		}),
+	})
+	T(group, "BackgroundColor3", "Surface")
+	T(group:FindFirstChildOfClass("UIStroke"), "Color", "Stroke")
+
+	local indicator = Create("Frame", {
+		Name = "Indicator",
+		Position = UDim2.new(0, 2, 0, 2),
+		Size = UDim2.new(0.5, -3, 1, -4),
+		BackgroundColor3 = token("Accent"),
+		BorderSizePixel = 0,
+		Parent = group,
+	}, { Create("UICorner", { CornerRadius = UDim.new(0, 4) }) })
+	bind(function()
+		indicator.BackgroundColor3 = token("Accent")
+	end)
+
+	local offLabel = Create("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 0, 0, 0),
+		Size = UDim2.new(0.5, 0, 1, 0),
+		Font = "@FontMedium", TextSize = 11,
+		TextColor3 = token("TextDim"),
+		Text = offText,
+		Parent = group,
+	})
+	T(offLabel, "TextColor3", "TextDim")
+
+	local onLabel = Create("TextLabel", {
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0.5, 0, 0, 0),
+		Size = UDim2.new(0.5, 0, 1, 0),
+		Font = "@FontMedium", TextSize = 11,
+		TextColor3 = token("OnAccent"),
+		Text = onText,
+		Parent = group,
+	})
+
+	local hit = Create("TextButton", {
+		Size = UDim2.new(1, 0, 1, 0),
+		BackgroundTransparency = 1, Text = "",
+		ZIndex = 3, Parent = group,
+	})
+
+	local function apply(instant)
+		local indicatorGoal = state
+			and { Position = UDim2.new(0.5, 1, 0, 2) }
+			or { Position = UDim2.new(0, 2, 0, 2) }
+		local onGoal = state and token("OnAccent") or token("TextDim")
+		local offGoal = state and token("TextDim") or token("OnAccent")
+		if instant then
+			indicator.Position = indicatorGoal.Position
+			onLabel.TextColor3 = onGoal
+			offLabel.TextColor3 = offGoal
+		else
+			Utility.Tween(indicator, Utility.TweenFast, indicatorGoal)
+			Utility.Tween(onLabel, Utility.TweenFast, { TextColor3 = onGoal })
+			Utility.Tween(offLabel, Utility.TweenFast, { TextColor3 = offGoal })
+		end
+	end
+	bind(function()
+		apply(true)
+	end)
+
+	local handle = { Root = row }
+	function handle:Set(newState, silent)
+		newState = newState == true
+		if newState == state then
+			return
+		end
+		state = newState
+		apply(false)
+		if not silent then
+			safeCall(config.Callback, state)
+		end
+	end
+	function handle:Get()
+		return state
+	end
+	hit.Activated:Connect(function()
+		handle:Set(not state)
+	end)
+	Utility.AddPressEffect(hit)
+	Library:_registerFlag(config.Flag, handle)
+	apply(true)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: TextArea (multi-line text input)
+--------------------------------------------------------------------
+
+function Section:CreateTextArea(config)
+	config = config or {}
+	local holder = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Parent = self._body,
+	}, { Create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+
+	local title = Create("TextLabel", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 16),
+		Font = "@FontMedium", TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = token("Text"),
+		Text = config.Title or "Text",
+		Parent = holder,
+	})
+	T(title, "TextColor3", "Text")
+
+	local stroke = Create("UIStroke", {
+		Thickness = 1, Color = token("Stroke"),
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+	})
+	T(stroke, "Color", "Stroke")
+
+	local box = Create("TextBox", {
+		Size = UDim2.new(1, 0, 0, config.Height or 80),
+		BackgroundColor3 = token("SurfaceAlt"),
+		ClearTextOnFocus = false,
+		MultiLine = true,
+		TextWrapped = true,
+		Font = "@Font", TextSize = 12,
+		TextColor3 = token("Text"),
+		PlaceholderColor3 = token("TextDim"),
+		PlaceholderText = config.Placeholder or "",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Top,
+		Text = config.Default or "",
+		LayoutOrder = 1,
+		Parent = holder,
+	}, {
+		Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Create("UIPadding", {
+			PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8),
+			PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
+		}),
+		stroke,
+	})
+	T(box, "BackgroundColor3", "SurfaceAlt")
+	T(box, "TextColor3", "Text")
+	T(box, "PlaceholderColor3", "TextDim")
+
+	box.Focused:Connect(function()
+		Utility.Tween(stroke, Utility.TweenFast, { Color = token("Accent") })
+	end)
+	box.FocusLost:Connect(function(enterPressed)
+		Utility.Tween(stroke, Utility.TweenFast, { Color = token("Stroke") })
+		safeCall(config.Callback, box.Text)
+	end)
+
+	-- Character limit display (optional).
+	local charLabel
+	if config.MaxLength and type(config.MaxLength) == "number" then
+		charLabel = Create("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 12),
+			Font = "@Font", TextSize = 10,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextColor3 = token("TextDim"),
+			Text = ("%d / %d"):format(#box.Text, config.MaxLength),
+			LayoutOrder = 2,
+			Parent = holder,
+		})
+		T(charLabel, "TextColor3", "TextDim")
+		box:GetPropertyChangedSignal("Text"):Connect(function()
+			if #box.Text > config.MaxLength then
+				box.Text = box.Text:sub(1, config.MaxLength)
+			end
+			charLabel.Text = ("%d / %d"):format(#box.Text, config.MaxLength)
+		end)
+	end
+
+	local handle = { Root = holder }
+	function handle:Set(text)
+		box.Text = tostring(text)
+	end
+	function handle:Get()
+		return box.Text
+	end
+	Library:_registerFlag(config.Flag, handle)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: Range Slider (dual-thumb min/max)
+--------------------------------------------------------------------
+
+function Section:CreateRangeSlider(config)
+	config = config or {}
+	local minV = config.Min or 0
+	local maxV = config.Max or 100
+	local step = config.Step or 1
+	local suffix = config.Suffix or ""
+	local lo = Utility.Clamp(config.DefaultMin or minV, minV, maxV)
+	local hi = Utility.Clamp(config.DefaultMax or maxV, minV, maxV)
+	if lo > hi then
+		lo, hi = hi, lo
+	end
+
+	local function format(v)
+		if step >= 1 then
+			return string.format("%d%s", v, suffix)
+		end
+		return string.format("%.2f%s", v, suffix)
+	end
+
+	local function percent(v)
+		if maxV <= minV then
+			return 0
+		end
+		return (v - minV) / (maxV - minV)
+	end
+
+	local row = sectionRow(self, 50)
+	local label = rowLabel(row, config.Title or "Range", 120)
+	label.Size = UDim2.new(1, -120, 0, 20)
+
+	local valueLabel = Create("TextLabel", {
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.new(1, 0, 0, 0),
+		Size = UDim2.new(0, 116, 0, 20),
+		Font = "@FontMedium", TextSize = 12,
+		TextColor3 = token("TextDim"),
+		TextXAlignment = Enum.TextXAlignment.Right,
+		Text = format(lo) .. " – " .. format(hi),
+		Parent = row,
+	})
+	T(valueLabel, "TextColor3", "TextDim")
+
+	local track = Create("Frame", {
+		Position = UDim2.new(0, 0, 0, 30),
+		Size = UDim2.new(1, 0, 0, 6),
+		BackgroundColor3 = token("Stroke"),
+		BorderSizePixel = 0,
+		Parent = row,
+	}, { Create("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+	T(track, "BackgroundColor3", "Stroke")
+
+	local fill = Create("Frame", {
+		Position = UDim2.fromScale(percent(lo), 0),
+		Size = UDim2.fromScale(percent(hi) - percent(lo), 1),
+		BackgroundColor3 = token("Accent"),
+		BorderSizePixel = 0,
+		Parent = track,
+	}, { Create("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+	bind(function()
+		fill.BackgroundColor3 = token("Accent")
+	end)
+
+	local function makeKnob(initP)
+		return Create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.new(initP, 0, 0.5, 0),
+			Size = UDim2.new(0, 14, 0, 14),
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			BorderSizePixel = 0, ZIndex = 2,
+			Parent = track,
+		}, {
+			Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Create("UIStroke", {
+				Thickness = 1, Color = token("Stroke"),
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+		})
+	end
+	local knobLo = makeKnob(percent(lo))
+	local knobHi = makeKnob(percent(hi))
+
+	local hit = Create("TextButton", {
+		BackgroundTransparency = 1, Text = "",
+		Position = UDim2.new(0, 0, 0, 20),
+		Size = UDim2.new(1, 0, 0, 20),
+		ZIndex = 3, Parent = row,
+	})
+
+	local activeDrag -- "lo" | "hi" | nil
+
+	local function refresh()
+		local pLo = percent(lo)
+		local pHi = percent(hi)
+		fill.Position = UDim2.fromScale(pLo, 0)
+		fill.Size = UDim2.fromScale(pHi - pLo, 1)
+		knobLo.Position = UDim2.new(pLo, 0, 0.5, 0)
+		knobHi.Position = UDim2.new(pHi, 0, 0.5, 0)
+		valueLabel.Text = format(lo) .. " – " .. format(hi)
+	end
+
+	local function updateFromInput(input)
+		local width = math.max(track.AbsoluteSize.X, 1)
+		local p = Utility.Clamp((input.Position.X - track.AbsolutePosition.X) / width, 0, 1)
+		local v = Utility.Clamp(Utility.Round(minV + p * (maxV - minV), step), minV, maxV)
+		if activeDrag == "lo" then
+			lo = math.min(v, hi)
+		elseif activeDrag == "hi" then
+			hi = math.max(v, lo)
+		end
+		refresh()
+		safeCall(config.Callback, lo, hi)
+	end
+
+	hit.InputBegan:Connect(function(input)
+		if not Utility.IsPrimary(input) then
+			return
+		end
+		-- Determine which knob is closer to the click.
+		local width = math.max(track.AbsoluteSize.X, 1)
+		local p = Utility.Clamp((input.Position.X - track.AbsolutePosition.X) / width, 0, 1)
+		local v = minV + p * (maxV - minV)
+		if math.abs(v - lo) <= math.abs(v - hi) then
+			activeDrag = "lo"
+		else
+			activeDrag = "hi"
+		end
+		updateFromInput(input)
+	end)
+	Utility.OnInput("Ended", hit, function(input)
+		if Utility.IsPrimary(input) then
+			activeDrag = nil
+		end
+	end)
+	Utility.OnInput("Changed", hit, function(input)
+		if activeDrag and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+			updateFromInput(input)
+		end
+	end)
+
+	local handle = { Root = row }
+	function handle:Set(newLo, newHi, silent)
+		lo = Utility.Clamp(Utility.Round(newLo or lo, step), minV, maxV)
+		hi = Utility.Clamp(Utility.Round(newHi or hi, step), minV, maxV)
+		if lo > hi then
+			lo, hi = hi, lo
+		end
+		refresh()
+		if not silent then
+			safeCall(config.Callback, lo, hi)
+		end
+	end
+	function handle:Get()
+		return lo, hi
+	end
+	Library:_registerFlag(config.Flag, handle)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: RadioGroup (exclusive radio buttons)
+--------------------------------------------------------------------
+
+function Section:CreateRadioGroup(config)
+	config = config or {}
+	local options = config.Options or {}
+	assert(#options >= 2, "[Atlas] CreateRadioGroup requires at least two options")
+	local selected = config.Default or options[1]
+
+	local holder = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Parent = self._body,
+	}, { Create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }) })
+
+	-- Header label
+	Create("TextLabel", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 18),
+		Font = "@FontMedium", TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = token("Text"),
+		Text = config.Title or "Choice",
+		Parent = holder,
+	})
+
+	local radioButtons = {}
+	local radioOuters = {}
+	local radioInners = {}
+
+	local function repaint()
+		for option, _ in pairs(radioButtons) do
+			local active = (option == selected)
+			local inner = radioInners[option]
+			if inner then
+				Utility.Tween(inner, Utility.TweenFast, {
+					Size = active and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 0, 0, 0),
+					BackgroundTransparency = active and 0 or 1,
+				})
+			end
+			local labelObj = radioButtons[option]
+			if labelObj then
+				labelObj.TextColor3 = active and token("Text") or token("TextDim")
+			end
+		end
+	end
+	bind(repaint)
+
+	for index, option in ipairs(options) do
+		local rowFrame = Create("Frame", {
+			LayoutOrder = index,
+			Size = UDim2.new(1, 0, 0, 28),
+			BackgroundTransparency = 1,
+			Parent = holder,
+		})
+
+		local outer = Create("Frame", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 0, 0.5, 0),
+			Size = UDim2.new(0, 18, 0, 18),
+			BackgroundColor3 = token("Surface"),
+			BorderSizePixel = 0,
+			Parent = rowFrame,
+		}, {
+			Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+			Create("UIStroke", {
+				Thickness = 1, Color = token("Stroke"),
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+		})
+		T(outer, "BackgroundColor3", "Surface")
+		T(outer:FindFirstChildOfClass("UIStroke"), "Color", "Stroke")
+		radioOuters[option] = outer
+
+		local inner = Create("Frame", {
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = (option == selected) and UDim2.new(0, 10, 0, 10) or UDim2.new(0, 0, 0, 0),
+			BackgroundColor3 = token("Accent"),
+			BackgroundTransparency = (option == selected) and 0 or 1,
+			BorderSizePixel = 0, ZIndex = 2,
+			Parent = outer,
+		}, { Create("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		bind(function()
+			inner.BackgroundColor3 = token("Accent")
+		end)
+		radioInners[option] = inner
+
+		local lbl = Create("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 26, 0, 0),
+			Size = UDim2.new(1, -26, 1, 0),
+			Font = "@FontMedium", TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = (option == selected) and token("Text") or token("TextDim"),
+			Text = tostring(option),
+			Parent = rowFrame,
+		})
+		radioButtons[option] = lbl
+
+		local hit = Create("TextButton", {
+			Size = UDim2.new(1, 0, 1, 0),
+			BackgroundTransparency = 1, Text = "",
+			ZIndex = 3, Parent = rowFrame,
+		})
+		hit.Activated:Connect(function()
+			if selected == option then
+				return
+			end
+			selected = option
+			repaint()
+			safeCall(config.Callback, selected)
+		end)
+	end
+
+	local handle = { Root = holder }
+	function handle:Set(v, silent)
+		if radioButtons[v] then
+			selected = v
+			repaint()
+			if not silent then
+				safeCall(config.Callback, v)
+			end
+		end
+	end
+	function handle:Get()
+		return selected
+	end
+	Library:_registerFlag(config.Flag, handle)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Service: Keyboard Shortcuts
+--------------------------------------------------------------------
+
+-- Atlas:AddShortcut({ Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.S },
+--                     Name = "Save", Callback = fn })
+-- Returns a handle with :Disconnect().
+-- All modifiers must be held at the moment the final key goes down.
+
+Library._shortcuts = Library._shortcuts or {}
+local shortcutsConnected = false
+
+local function ensureShortcutsConnected()
+	if shortcutsConnected then
+		return
+	end
+	shortcutsConnected = true
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then
+			return
+		end
+		for _, sc in ipairs(Library._shortcuts) do
+			if sc.Enabled == false then
+				-- skip disabled shortcuts
+			elseif input.KeyCode == sc.TriggerKey then
+				local allHeld = true
+				for _, mod in ipairs(sc.Modifiers) do
+					if not UserInputService:IsKeyDown(mod) then
+						allHeld = false
+						break
+					end
+				end
+				if allHeld then
+					safeCall(sc.Callback)
+				end
+			end
+		end
+	end)
+end
+
+function Library:AddShortcut(config)
+	assert(type(config) == "table" and type(config.Keys) == "table" and #config.Keys >= 1,
+		"[Atlas] AddShortcut requires a Keys array (at least one KeyCode)")
+	assert(type(config.Callback) == "function",
+		"[Atlas] AddShortcut requires a Callback function")
+	ensureShortcutsConnected()
+	-- Last key in the array is the trigger; the rest are modifiers.
+	local keys = config.Keys
+	local triggerKey = keys[#keys]
+	local modifiers = {}
+	for i = 1, #keys - 1 do
+		table.insert(modifiers, keys[i])
+	end
+	local entry = {
+		Name = config.Name or "Shortcut",
+		Keys = keys,
+		TriggerKey = triggerKey,
+		Modifiers = modifiers,
+		Callback = config.Callback,
+		Enabled = true,
+	}
+	table.insert(self._shortcuts, entry)
+	local handle = {}
+	function handle:Disconnect()
+		entry.Enabled = false
+		local idx = table.find(Library._shortcuts, entry)
+		if idx then
+			table.remove(Library._shortcuts, idx)
+		end
+	end
+	function handle:SetEnabled(on)
+		entry.Enabled = on ~= false
+	end
+	return handle
+end
+
+function Library:GetShortcuts()
+	local list = {}
+	for _, sc in ipairs(self._shortcuts) do
+		if sc.Enabled ~= false then
+			table.insert(list, { Name = sc.Name, Keys = sc.Keys })
+		end
+	end
+	return list
+end
+
+--------------------------------------------------------------------
+-- Service: Status Bar (persistent bottom bar with live status text)
+--------------------------------------------------------------------
+
+-- Atlas:SetStatusBar({ Text = "Ready", Accent = true })
+-- Atlas:SetStatusBarText("Processing...")
+-- Atlas:SetStatusBarVisible(bool)
+
+function Library:SetStatusBar(config)
+	config = config or {}
+	local gui = self:_getGui()
+
+	if self._statusBar == nil then
+		local bar = Create("Frame", {
+			Name = "AtlasStatusBar",
+			AnchorPoint = Vector2.new(0.5, 1),
+			Position = UDim2.new(0.5, 0, 1, 0),
+			Size = UDim2.new(1, 0, 0, 28),
+			BackgroundColor3 = token("Surface"),
+			BorderSizePixel = 0,
+			ZIndex = 1100,
+			Parent = gui,
+		}, {
+			Create("UIStroke", {
+				Thickness = 1, Color = token("Stroke"),
+				ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			}),
+		})
+		T(bar, "BackgroundColor3", "Surface")
+		T(bar:FindFirstChildOfClass("UIStroke"), "Color", "Stroke")
+
+		local dot = Create("Frame", {
+			Name = "StatusDot",
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 12, 0.5, 0),
+			Size = UDim2.new(0, 8, 0, 8),
+			BackgroundColor3 = token("Accent"),
+			BorderSizePixel = 0,
+			Visible = false,
+			Parent = bar,
+		}, { Create("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		T(dot, "BackgroundColor3", "Accent")
+
+		local label = Create("TextLabel", {
+			Name = "StatusText",
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 12, 0, 0),
+			Size = UDim2.new(1, -24, 1, 0),
+			Font = "@FontMedium", TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = token("TextDim"),
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			Text = "",
+			Parent = bar,
+		})
+		T(label, "TextColor3", "TextDim")
+
+		self._statusBar = bar
+		self._statusDot = dot
+		self._statusLabel = label
+	end
+
+	local bar = self._statusBar
+	local dot = self._statusDot
+	local label = self._statusLabel
+
+	if config.Text ~= nil then
+		label.Text = tostring(config.Text)
+	end
+	if config.Accent ~= nil then
+		dot.Visible = config.Accent == true
+		label.Position = config.Accent
+			and UDim2.new(0, 26, 0, 0)
+			or UDim2.new(0, 12, 0, 0)
+		label.Size = config.Accent
+			and UDim2.new(1, -38, 1, 0)
+			or UDim2.new(1, -24, 1, 0)
+	end
+	bar.Visible = config.Visible ~= false
+	return bar
+end
+
+function Library:SetStatusBarText(text)
+	if self._statusLabel then
+		self._statusLabel.Text = tostring(text)
+	end
+end
+
+function Library:SetStatusBarVisible(visible)
+	if self._statusBar then
+		self._statusBar.Visible = visible == true
+	end
 end
 
 --------------------------------------------------------------------

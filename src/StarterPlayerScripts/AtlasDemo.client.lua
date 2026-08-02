@@ -49,6 +49,7 @@ local function demoMenuItems()
 		{ Name = "Jump to Tab", Submenu = { -- one level of nesting
 			{ Name = "General", Callback = function() window:SelectTab("General") end },
 			{ Name = "UI Settings", Callback = function() window:SelectTab("UI Settings") end },
+			{ Name = "Components", Callback = function() window:SelectTab("Components") end },
 			{ Name = "Advanced", Callback = function() window:SelectTab("Advanced") end },
 			{ Name = "About", Callback = function() window:SelectTab("About") end },
 		} },
@@ -367,7 +368,117 @@ resetSection:CreateButton({
 })
 
 --------------------------------------------------------------------
--- Tab 3: Advanced
+-- Tab 3: New Components (v2.14.0)
+--------------------------------------------------------------------
+local components = window:CreateTab({ Title = "Components" })
+
+-- Switch (labeled two-state, different from Toggle)
+local switchSection = components:CreateSection({ Title = "Switch" })
+switchSection:CreateSwitch({
+	Title = "Notifications",
+	OnText = "On",
+	OffText = "Off",
+	Default = true,
+	Flag = "NotifySwitch",
+	Callback = function(on)
+		print("[Demo] Notifications:", on)
+		Atlas:SetStatusBarText(on and "Notifications enabled" or "Notifications muted")
+	end,
+})
+switchSection:CreateSwitch({
+	Title = "Game Mode",
+	OnText = "PvP",
+	OffText = "PvE",
+	Default = false,
+	Flag = "GameMode",
+	Callback = function(pvp) print("[Demo] Mode:", pvp and "PvP" or "PvE") end,
+})
+
+-- TextArea (multi-line input)
+local textSection = components:CreateSection({ Title = "TextArea" })
+textSection:CreateTextArea({
+	Title = "Bio / Description",
+	Placeholder = "Write something here...\nSupports multiple lines.",
+	Height = 70,
+	MaxLength = 200,
+	Flag = "UserBio",
+	Callback = function(text)
+		print("[Demo] Bio:", text)
+	end,
+})
+textSection:CreateTextArea({
+	Title = "Lua Snippet",
+	Placeholder = "-- paste code here",
+	Height = 90,
+	Callback = function(text) print("[Demo] Code:", text) end,
+})
+
+-- Range Slider (dual-thumb)
+local rangeSection = components:CreateSection({ Title = "Range Slider" })
+rangeSection:CreateRangeSlider({
+	Title = "Level Range",
+	Min = 1, Max = 100, Step = 1,
+	DefaultMin = 10, DefaultMax = 50,
+	Flag = "LevelRange",
+	Callback = function(lo, hi)
+		print("[Demo] Level range:", lo, "-", hi)
+	end,
+})
+rangeSection:CreateRangeSlider({
+	Title = "Price Filter",
+	Min = 0, Max = 1000, Step = 25,
+	DefaultMin = 100, DefaultMax = 750,
+	Suffix = "$",
+	Callback = function(lo, hi)
+		print("[Demo] Price:", lo, "-", hi)
+	end,
+})
+
+-- RadioGroup (exclusive vertical radios)
+local radioSection = components:CreateSection({ Title = "Radio Group" })
+radioSection:CreateRadioGroup({
+	Title = "Difficulty",
+	Options = { "Easy", "Normal", "Hard", "Nightmare" },
+	Default = "Normal",
+	Flag = "Difficulty",
+	Callback = function(v)
+		print("[Demo] Difficulty:", v)
+		Atlas:Notify({ Title = "Difficulty", Text = "Set to " .. v .. ".", Duration = 2 })
+	end,
+})
+radioSection:CreateRadioGroup({
+	Title = "Region",
+	Options = { "US East", "US West", "Europe", "Asia" },
+	Default = "Europe",
+	Flag = "Region",
+	Callback = function(v) print("[Demo] Region:", v) end,
+})
+
+-- Shortcuts & Status Bar demo
+local serviceSection = components:CreateSection({ Title = "Services (v2.14.0)" })
+serviceSection:CreateLabel({
+	Text = "Keyboard shortcuts: Ctrl+D toggles the status bar. "
+		.. "Ctrl+N sends a test notification.",
+})
+serviceSection:CreateToggle({
+	Title = "Status Bar",
+	Default = true,
+	Flag = "StatusBarVisible",
+	Callback = function(on) Atlas:SetStatusBarVisible(on) end,
+})
+serviceSection:CreateButton({
+	Title = "Update Status Text",
+	Callback = function()
+		Atlas:SetStatusBarText("Updated at " .. os.date("%H:%M:%S"))
+	end,
+})
+serviceSection:CreateLabel({
+	Text = "Shortcuts registered: " .. tostring(#Atlas:GetShortcuts())
+		.. " (updates after registrations below).",
+})
+
+--------------------------------------------------------------------
+-- Tab 4: Advanced
 --------------------------------------------------------------------
 local advanced = window:CreateTab({ Title = "Advanced" })
 
@@ -748,9 +859,42 @@ Atlas:RegisterCommand({
 })
 
 
+--------------------------------------------------------------------
+-- Keyboard shortcuts (v2.14.0)
+--------------------------------------------------------------------
+Atlas:AddShortcut({
+	Name = "Toggle Status Bar",
+	Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.D },
+	Callback = function()
+		local visible = Atlas._statusBar and Atlas._statusBar.Visible
+		Atlas:SetStatusBarVisible(not visible)
+		Atlas:Notify({ Title = "Status Bar", Text = visible and "Hidden" or "Shown", Duration = 1.5 })
+	end,
+})
+Atlas:AddShortcut({
+	Name = "Test Notification",
+	Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.N },
+	Callback = function()
+		Atlas:Notify({ Title = "Shortcut", Text = "Ctrl+N fired!", Duration = 2, AccentToken = "Success" })
+	end,
+})
+Atlas:AddShortcut({
+	Name = "Quick Save",
+	Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.S },
+	Callback = function()
+		Atlas:SaveConfig("quicksave")
+		Atlas:SetStatusBarText("Quick-saved at " .. os.date("%H:%M:%S"))
+		Atlas:Notify({ Title = "Profiles", Text = "Quick-saved.", Duration = 1.5, AccentToken = "Success" })
+	end,
+})
+
+-- Status bar (v2.14.0): persistent info strip at the bottom of the screen.
+Atlas:SetStatusBar({ Text = "Ready — Atlas v" .. Atlas:GetVersion(), Accent = true })
+
 -- Registry stats for the About tab (all flags/commands exist by now).
-stats:SetText(("Registry — flags: %d  ·  palette commands: %d  ·  themes: %d"):format(
+stats:SetText(("Registry — flags: %d  ·  commands: %d  ·  themes: %d  ·  shortcuts: %d"):format(
 	Atlas:GetFlagCount(),
 	#Atlas:GetCommands(),
-	#Atlas:GetThemeNames()
+	#Atlas:GetThemeNames(),
+	#Atlas:GetShortcuts()
 ))
