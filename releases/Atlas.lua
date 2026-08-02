@@ -490,7 +490,7 @@ local GuiService = game:GetService("GuiService")
 --------------------------------------------------------------------
 
 local Library = {
-	VERSION = "2.15.0",
+	VERSION = "2.16.0",
 	Theme = Theme,
 	Utility = Utility,
 	Device = Device,
@@ -1089,7 +1089,9 @@ function Library:Notify(config)
 	T(close, "TextColor3", "TextDim")
 	close.Activated:Connect(dismiss)
 
-	Utility.Tween(card, Utility.TweenMed, { GroupTransparency = 0 })
+	-- Slide-in from the right + grow-in for a polished entrance.
+	card.Position = UDim2.new(0, 40, 0, 0)
+	Utility.Tween(card, Utility.TweenMed, { GroupTransparency = 0, Position = UDim2.new(0, 0, 0, 0) })
 	Utility.Tween(card:FindFirstChildOfClass("UIScale"), Utility.TweenMed, { Scale = 1 })
 	if duration and duration > 0 then
 		task.delay(duration, function()
@@ -2315,7 +2317,32 @@ function Window:_selectTab(tab)
 	self._activeTab = tab
 	for _, t in ipairs(self._tabs) do
 		local active = (t == tab)
-		t._page.Visible = active
+		if active then
+			t._page.Visible = true
+			-- Scroll to top on tab switch for a fresh feel.
+			t._page.CanvasPosition = Vector2.new(0, 0)
+			-- Fade-in: a quick transparency transition on the page.
+			if t._page:FindFirstChild("_PageFade") == nil then
+				-- Use a CanvasGroup wrapper trick: page is a ScrollingFrame,
+				-- so we tween its children's GroupTransparency via a nested approach.
+				-- Simpler: adjust the page's own scroll-bar and tween transparency
+				-- of a cover overlay that fades out.
+				local fade = Create("Frame", {
+					Name = "_PageFade",
+					Size = UDim2.new(1, 0, 1, 0),
+					BackgroundColor3 = token("Surface"),
+					BackgroundTransparency = 0,
+					ZIndex = 100,
+					Parent = t._page,
+				})
+				T(fade, "BackgroundColor3", "Surface")
+				Utility.Tween(fade, Utility.TweenFast, { BackgroundTransparency = 1 }).Completed:Connect(function()
+					fade:Destroy()
+				end)
+			end
+		else
+			t._page.Visible = false
+		end
 		Utility.Tween(t._button, Utility.TweenFast, {
 			BackgroundTransparency = active and 0 or 1,
 			TextColor3 = active and token("Text") or token("TextDim"),
@@ -2397,9 +2424,12 @@ end
 -- Section and component rows
 --------------------------------------------------------------------
 
-local function sectionRow(section, height)
+local function sectionRow(section, height, config)
+	config = config or {}
+	-- Rows with a Description sub-label need extra height.
+	local effectiveHeight = config.Description and (height + 16) or height
 	local row = Create("Frame", {
-		Size = UDim2.new(1, 0, 0, height),
+		Size = UDim2.new(1, 0, 0, effectiveHeight),
 		BackgroundColor3 = token("SurfaceAlt"),
 		BorderSizePixel = 0,
 		Parent = section._body,
@@ -2414,13 +2444,27 @@ local function sectionRow(section, height)
 		Thickness = 1, Color = token("Stroke"),
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = row,
 	}), "Color", "Stroke")
+	-- Hover highlight on every control row.
+	row.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			Utility.Tween(row, Utility.TweenFast, { BackgroundColor3 = token("Hover") })
+		end
+	end)
+	row.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement then
+			Utility.Tween(row, Utility.TweenFast, { BackgroundColor3 = token("SurfaceAlt") })
+		end
+	end)
 	return row
 end
 
-local function rowLabel(row, text, widthReserve)
+local function rowLabel(row, text, widthReserve, description)
 	local label = Create("TextLabel", {
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, -(widthReserve or 0), 1, 0),
+		Size = UDim2.new(1, -(widthReserve or 0), 0, description and 18 or 0),
+		AutomaticSize = description and Enum.AutomaticSize.None or Enum.AutomaticSize.None,
+		Position = description and UDim2.new(0, 0, 0, 4) or UDim2.new(0, 0, 0, 0),
+		AnchorPoint = description and Vector2.new(0, 0) or Vector2.zero,
 		Font = "@FontMedium", TextSize = 13,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2428,7 +2472,25 @@ local function rowLabel(row, text, widthReserve)
 		Text = text,
 		Parent = row,
 	})
+	if not description then
+		label.Size = UDim2.new(1, -(widthReserve or 0), 1, 0)
+	end
 	T(label, "TextColor3", "Text")
+	-- Optional description subtitle below the title.
+	if description then
+		local desc = Create("TextLabel", {
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 0, 0, 22),
+			Size = UDim2.new(1, -(widthReserve or 0), 0, 14),
+			Font = "@Font", TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextColor3 = token("TextDim"),
+			Text = description,
+			Parent = row,
+		})
+		T(desc, "TextColor3", "TextDim")
+	end
 	return label
 end
 
@@ -2446,6 +2508,12 @@ function Tab:CreateSection(config)
 		Create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 	})
 
+	-- Section icon: CreateSection{ Icon = "⚡" } adds a prefix before the title.
+	local headerText = string.upper(config.Title or "Section")
+	if type(config.Icon) == "string" and config.Icon ~= "" then
+		headerText = config.Icon .. "  " .. headerText
+	end
+
 	local headerClass = collapsible and "TextButton" or "TextLabel"
 	local header = Create(headerClass, {
 		BackgroundTransparency = 1,
@@ -2453,7 +2521,7 @@ function Tab:CreateSection(config)
 		Font = "@FontBold", TextSize = 12,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = token("TextDim"),
-		Text = string.upper(config.Title or "Section"),
+		Text = headerText,
 		AutoButtonColor = false,
 		Parent = holder,
 	})
@@ -2586,8 +2654,9 @@ end
 
 function Section:CreateButton(config)
 	config = config or {}
+	local btnHeight = config.Description and 50 or 34
 	local button = Create("TextButton", {
-		Size = UDim2.new(1, 0, 0, 34),
+		Size = UDim2.new(1, 0, 0, btnHeight),
 		BackgroundColor3 = token("SurfaceAlt"),
 		AutoButtonColor = false, BorderSizePixel = 0,
 		Font = "@FontMedium", TextSize = 13,
@@ -2599,6 +2668,7 @@ function Section:CreateButton(config)
 		Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
 		Create("UIPadding", {
 			PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12),
+			PaddingTop = config.Description and UDim.new(0, 6) or UDim.new(0, 0),
 		}),
 		Create("TextLabel", {
 			Name = "Chevron",
@@ -2610,6 +2680,23 @@ function Section:CreateButton(config)
 			TextColor3 = token("TextDim"), Text = "›",
 		}),
 	})
+	if config.Description then
+		-- Shift the title up and add a description line.
+		button.TextYAlignment = Enum.TextYAlignment.Top
+		local desc = Create("TextLabel", {
+			Name = "Description",
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 0, 0, 18),
+			Size = UDim2.new(1, -24, 0, 14),
+			Font = "@Font", TextSize = 11,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextTruncate = Enum.TextTruncate.AtEnd,
+			TextColor3 = token("TextDim"),
+			Text = config.Description,
+			Parent = button,
+		})
+		T(desc, "TextColor3", "TextDim")
+	end
 	T(button, "BackgroundColor3", "SurfaceAlt")
 	T(button, "TextColor3", "Text")
 	T(Create("UIStroke", {
@@ -2625,13 +2712,27 @@ function Section:CreateButton(config)
 		Utility.Tween(button, Utility.TweenFast, { BackgroundColor3 = token("SurfaceAlt") })
 	end)
 	Utility.AddPressEffect(button)
+
+	local disabled = config.Disabled == true
+	if disabled then
+		button.AutoButtonColor = false
+		button.BackgroundTransparency = 0.4
+		button.TextTransparency = 0.4
+	end
+
 	button.Activated:Connect(function()
+		if disabled then return end
 		safeCall(config.Callback)
 	end)
 
 	local handle = { Root = button }
 	function handle:SetText(text)
 		button.Text = text
+	end
+	function handle:SetDisabled(on)
+		disabled = on == true
+		button.BackgroundTransparency = disabled and 0.4 or 0
+		button.TextTransparency = disabled and 0.4 or 0
 	end
 	return handle
 end
@@ -2643,8 +2744,9 @@ end
 function Section:CreateToggle(config)
 	config = config or {}
 	local state = config.Default == true
-	local row = sectionRow(self, 34)
-	rowLabel(row, config.Title or "Toggle", 60)
+	local disabled = config.Disabled == true
+	local row = sectionRow(self, 34, { Description = config.Description })
+	rowLabel(row, config.Title or "Toggle", 60, config.Description)
 
 	local pill = Create("Frame", {
 		AnchorPoint = Vector2.new(1, 0.5),
@@ -2666,6 +2768,15 @@ function Section:CreateToggle(config)
 		BackgroundTransparency = 1, Text = "",
 		ZIndex = 3, Parent = row,
 	})
+	-- Toggle hover: pill brightens slightly when hovered.
+	hit.MouseEnter:Connect(function()
+		if not disabled then
+			Utility.Tween(knob, Utility.TweenFast, { Size = UDim2.new(0, 18, 0, 18) })
+		end
+	end)
+	hit.MouseLeave:Connect(function()
+		Utility.Tween(knob, Utility.TweenFast, { Size = UDim2.new(0, 16, 0, 16) })
+	end)
 
 	local function apply(instant)
 		local onColor = state and token("Accent") or token("Stroke")
@@ -2699,8 +2810,18 @@ function Section:CreateToggle(config)
 	end
 
 	hit.Activated:Connect(function()
+		if disabled then return end
 		handle:Set(not state)
 	end)
+
+	function handle:SetDisabled(on)
+		disabled = on == true
+		row.BackgroundTransparency = disabled and 0.4 or 0
+	end
+
+	if disabled then
+		row.BackgroundTransparency = 0.4
+	end
 
 	Library:_registerFlag(config.Flag, handle)
 	apply(true)
@@ -2726,8 +2847,8 @@ function Section:CreateSlider(config)
 		return string.format("%.2f%s", v, suffix)
 	end
 
-	local row = sectionRow(self, 50)
-	local label = rowLabel(row, config.Title or "Slider", 90)
+	local row = sectionRow(self, 50, { Description = config.Description })
+	local label = rowLabel(row, config.Title or "Slider", 90, config.Description)
 	label.Size = UDim2.new(1, -90, 0, 20)
 
 	local valueLabel = Create("TextLabel", {
@@ -5573,11 +5694,19 @@ function Library:AddTooltip(target, text)
 			}),
 		})
 		T(tip, "BackgroundColor3", "Surface")
-		local centerX = target.AbsolutePosition.X + target.AbsoluteSize.X / 2
+		-- Position above the target, but use the mouse X for horizontal
+		-- alignment so the tooltip tracks where the user is looking.
+		local mousePos = UserInputService:GetMouseLocation()
+		local centerX = mousePos.X
 		local topY = target.AbsolutePosition.Y - 8
+		-- Fallback if the mouse is far from the target (touch scenario):
+		if math.abs(centerX - (target.AbsolutePosition.X + target.AbsoluteSize.X / 2)) > target.AbsoluteSize.X then
+			centerX = target.AbsolutePosition.X + target.AbsoluteSize.X / 2
+		end
+		local viewW = gui.AbsoluteSize.X
 		tip.Position = UDim2.fromOffset(
-			math.clamp(centerX, 90, math.max(gui.AbsoluteSize.X - 90, 90)),
-			topY
+			math.clamp(centerX, 90, math.max(viewW - 90, 90)),
+			math.max(topY, 8)
 		)
 		Utility.Tween(tip, Utility.TweenFast, { GroupTransparency = 0 })
 	end

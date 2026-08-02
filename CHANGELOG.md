@@ -2,6 +2,20 @@
 
 All notable changes to atlas-ui are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.16.0] — 2026-08-02
+
+### UI/UX Improvements
+- **Tab page fade transition**: switching tabs now plays a quick surface-colored overlay fade-out instead of an instant show/hide, giving page transitions a polished feel
+- **Scroll-to-top on tab switch**: every tab page resets its scroll position to the top when activated — no more landing in the middle of the previous scroll state
+- **Button descriptions**: `CreateButton{ Description = "..." }` adds a dimmed subtitle line below the title (the row grows taller to accommodate); same support on Toggle and Slider
+- **Disabled state**: `CreateButton{ Disabled = true }` and `CreateToggle{ Disabled = true }` — grayed-out rows that swallow clicks; live `handle:SetDisabled(on)` for runtime toggling
+- **Toggle hover feedback**: hovering the toggle pill swells the knob (16→18 px, same language as the slider), signaling it's interactive
+- **Control row hover highlight**: every `sectionRow`-based control (Toggle, Slider, Dropdown, Stepper, Switch, Rating, TimePicker, etc.) now brightens to the Hover token on mouse-over — subtle but consistent feedback across the library
+- **Section header icons**: `CreateSection{ Icon = "⚡" }` prepends a text icon before the uppercase title — zero-asset decoration for visual grouping
+- **Notification slide-in**: toasts now enter from +40 px to the right (in addition to the existing scale-up and fade), adding directional motion to the entrance
+- **Smarter tooltip positioning**: tooltips now use the mouse's X coordinate (clamped to the target width) instead of the target's center, so the tip appears where the user is looking; fallback to center on touch
+- Demo: Navigation, Movement and System sections use icons; Walk Speed slider, Auto Sprint toggle and navigation button show descriptions; disabled button showcase; live version in the About paragraph
+
 ## [2.15.0] — 2026-08-02
 
 ### Added

@@ -5,7 +5,7 @@ Every element is built from plain `Instance` graphs at runtime — no images, no
 
 Rebuilt from scratch in **v2.0.0** around a single idea: **the interface adapts to the device** — phone, tablet/iPad, desktop, or console — automatically.
 
-> Current version: **2.15.0** — see [CHANGELOG.md](CHANGELOG.md).
+> Current version: **2.16.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 

@@ -69,16 +69,18 @@ end
 --------------------------------------------------------------------
 local general = window:CreateTab({ Title = "General" })
 
-local navSection = general:CreateSection({ Title = "Navigation" })
+local navSection = general:CreateSection({ Title = "Navigation", Icon = "🧭" })
 navSection:CreateButton({
 	Title = "Open UI Settings →",
+	Description = "Jump to the appearance & behavior tab",
 	Callback = function() window:SelectTab("UI Settings") end,
 })
 
-local movement = general:CreateSection({ Title = "Movement" })
+local movement = general:CreateSection({ Title = "Movement", Icon = "🏃" })
 
 movement:CreateToggle({
 	Title = "Auto Sprint",
+	Description = "Automatically sprint when moving forward",
 	Flag = "AutoSprint",
 	Default = false,
 	Callback = function(on)
@@ -88,6 +90,7 @@ movement:CreateToggle({
 
 local walkSpeedHandle = movement:CreateSlider({
 	Title = "Walk Speed",
+	Description = "Studs per second",
 	Flag = "WalkSpeed",
 	Min = 8, Max = 64, Step = 1, Default = 16,
 	Suffix = " st/s",
@@ -109,10 +112,11 @@ movement:CreateKeybind({
 	end,
 })
 
-local system = general:CreateSection({ Title = "System" })
+local system = general:CreateSection({ Title = "System", Icon = "⚙" })
 
 system:CreateButton({
 	Title = "Print Current Settings",
+	Description = "Output all flagged values to the console",
 	Callback = function()
 		for _, flag in ipairs({ "AutoSprint", "WalkSpeed", "SprintKey" }) do
 			local handle = Atlas:GetFlag(flag)
@@ -121,6 +125,14 @@ system:CreateButton({
 			end
 		end
 	end,
+})
+
+-- Disabled button demo
+system:CreateButton({
+	Title = "Server Action (Disabled)",
+	Description = "This button is disabled as a demo",
+	Disabled = true,
+	Callback = function() end,
 })
 
 system:CreateInput({
@@ -136,7 +148,7 @@ system:CreateInput({
 --------------------------------------------------------------------
 local appearance = window:CreateTab({ Title = "UI Settings" })
 
-local presetSection = appearance:CreateSection({ Title = "Presets" })
+local presetSection = appearance:CreateSection({ Title = "Presets", Icon = "🎨" })
 
 -- Accent dot per theme next to every option name.
 local schemeColors = {}
@@ -596,7 +608,7 @@ serviceSection:CreateLabel({
 --------------------------------------------------------------------
 local advanced = window:CreateTab({ Title = "Advanced" })
 
-local inputSection = advanced:CreateSection({ Title = "Inputs", Collapsible = true, Flag = "Sec_Inputs" })
+local inputSection = advanced:CreateSection({ Title = "Inputs", Icon = "⌨", Collapsible = true, Flag = "Sec_Inputs" })
 
 inputSection:CreateSegmented({
 	Title = "Targeting Mode",
