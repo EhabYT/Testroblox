@@ -880,7 +880,7 @@ function Library:_getGui()
 			Position = UDim2.new(1, -16, 0, 16),
 			Size = UDim2.new(0, notifWidth, 1, -32),
 			BackgroundTransparency = 1,
-			ZIndex = 1500, -- فوق النوافذ (1)، تحت المودال (2000) واللوحة (2500)
+			ZIndex = 1500, -- above windows (1), below modals (2000) and the palette (2500)
 			Parent = gui,
 		}, {
 			Create("UIListLayout", {
