@@ -49,6 +49,7 @@ local function demoMenuItems()
 		{ Name = "Jump to Tab", Submenu = { -- one level of nesting
 			{ Name = "General", Callback = function() window:SelectTab("General") end },
 			{ Name = "UI Settings", Callback = function() window:SelectTab("UI Settings") end },
+			{ Name = "Components", Callback = function() window:SelectTab("Components") end },
 			{ Name = "Advanced", Callback = function() window:SelectTab("Advanced") end },
 			{ Name = "About", Callback = function() window:SelectTab("About") end },
 		} },
@@ -68,16 +69,18 @@ end
 --------------------------------------------------------------------
 local general = window:CreateTab({ Title = "General" })
 
-local navSection = general:CreateSection({ Title = "Navigation" })
+local navSection = general:CreateSection({ Title = "Navigation", Icon = "🧭" })
 navSection:CreateButton({
 	Title = "Open UI Settings →",
+	Description = "Jump to the appearance & behavior tab",
 	Callback = function() window:SelectTab("UI Settings") end,
 })
 
-local movement = general:CreateSection({ Title = "Movement" })
+local movement = general:CreateSection({ Title = "Movement", Icon = "🏃" })
 
 movement:CreateToggle({
 	Title = "Auto Sprint",
+	Description = "Automatically sprint when moving forward",
 	Flag = "AutoSprint",
 	Default = false,
 	Callback = function(on)
@@ -87,6 +90,7 @@ movement:CreateToggle({
 
 local walkSpeedHandle = movement:CreateSlider({
 	Title = "Walk Speed",
+	Description = "Studs per second",
 	Flag = "WalkSpeed",
 	Min = 8, Max = 64, Step = 1, Default = 16,
 	Suffix = " st/s",
@@ -108,10 +112,11 @@ movement:CreateKeybind({
 	end,
 })
 
-local system = general:CreateSection({ Title = "System" })
+local system = general:CreateSection({ Title = "System", Icon = "⚙" })
 
 system:CreateButton({
 	Title = "Print Current Settings",
+	Description = "Output all flagged values to the console",
 	Callback = function()
 		for _, flag in ipairs({ "AutoSprint", "WalkSpeed", "SprintKey" }) do
 			local handle = Atlas:GetFlag(flag)
@@ -120,6 +125,14 @@ system:CreateButton({
 			end
 		end
 	end,
+})
+
+-- Disabled button demo
+system:CreateButton({
+	Title = "Server Action (Disabled)",
+	Description = "This button is disabled as a demo",
+	Disabled = true,
+	Callback = function() end,
 })
 
 system:CreateInput({
@@ -135,7 +148,7 @@ system:CreateInput({
 --------------------------------------------------------------------
 local appearance = window:CreateTab({ Title = "UI Settings" })
 
-local presetSection = appearance:CreateSection({ Title = "Presets" })
+local presetSection = appearance:CreateSection({ Title = "Presets", Icon = "🎨" })
 
 -- Accent dot per theme next to every option name.
 local schemeColors = {}
@@ -367,11 +380,235 @@ resetSection:CreateButton({
 })
 
 --------------------------------------------------------------------
--- Tab 3: Advanced
+-- Tab 3: New Components (v2.14.0)
+--------------------------------------------------------------------
+local components = window:CreateTab({ Title = "Components" })
+
+-- Switch (labeled two-state, different from Toggle)
+local switchSection = components:CreateSection({ Title = "Switch" })
+switchSection:CreateSwitch({
+	Title = "Notifications",
+	OnText = "On",
+	OffText = "Off",
+	Default = true,
+	Flag = "NotifySwitch",
+	Callback = function(on)
+		print("[Demo] Notifications:", on)
+		Atlas:SetStatusBarText(on and "Notifications enabled" or "Notifications muted")
+	end,
+})
+switchSection:CreateSwitch({
+	Title = "Game Mode",
+	OnText = "PvP",
+	OffText = "PvE",
+	Default = false,
+	Flag = "GameMode",
+	Callback = function(pvp) print("[Demo] Mode:", pvp and "PvP" or "PvE") end,
+})
+
+-- TextArea (multi-line input)
+local textSection = components:CreateSection({ Title = "TextArea" })
+textSection:CreateTextArea({
+	Title = "Bio / Description",
+	Placeholder = "Write something here...\nSupports multiple lines.",
+	Height = 70,
+	MaxLength = 200,
+	Flag = "UserBio",
+	Callback = function(text)
+		print("[Demo] Bio:", text)
+	end,
+})
+textSection:CreateTextArea({
+	Title = "Lua Snippet",
+	Placeholder = "-- paste code here",
+	Height = 90,
+	Callback = function(text) print("[Demo] Code:", text) end,
+})
+
+-- Range Slider (dual-thumb)
+local rangeSection = components:CreateSection({ Title = "Range Slider" })
+rangeSection:CreateRangeSlider({
+	Title = "Level Range",
+	Min = 1, Max = 100, Step = 1,
+	DefaultMin = 10, DefaultMax = 50,
+	Flag = "LevelRange",
+	Callback = function(lo, hi)
+		print("[Demo] Level range:", lo, "-", hi)
+	end,
+})
+rangeSection:CreateRangeSlider({
+	Title = "Price Filter",
+	Min = 0, Max = 1000, Step = 25,
+	DefaultMin = 100, DefaultMax = 750,
+	Suffix = "$",
+	Callback = function(lo, hi)
+		print("[Demo] Price:", lo, "-", hi)
+	end,
+})
+
+-- RadioGroup (exclusive vertical radios)
+local radioSection = components:CreateSection({ Title = "Radio Group" })
+radioSection:CreateRadioGroup({
+	Title = "Difficulty",
+	Options = { "Easy", "Normal", "Hard", "Nightmare" },
+	Default = "Normal",
+	Flag = "Difficulty",
+	Callback = function(v)
+		print("[Demo] Difficulty:", v)
+		Atlas:Notify({ Title = "Difficulty", Text = "Set to " .. v .. ".", Duration = 2 })
+	end,
+})
+radioSection:CreateRadioGroup({
+	Title = "Region",
+	Options = { "US East", "US West", "Europe", "Asia" },
+	Default = "Europe",
+	Flag = "Region",
+	Callback = function(v) print("[Demo] Region:", v) end,
+})
+
+-- Chip / Tag List
+local chipSection = components:CreateSection({ Title = "Chip List" })
+chipSection:CreateChipList({
+	Title = "Filters",
+	Default = { "Online", "Verified" },
+	Placeholder = "Add filter…",
+	MaxTags = 8,
+	Flag = "Filters",
+	Callback = function(tags)
+		print("[Demo] Filters:", table.concat(tags, ", "))
+	end,
+})
+chipSection:CreateChipList({
+	Title = "Favorite Colors",
+	Default = { "Red", "Blue", "Green" },
+	Placeholder = "Add color…",
+	EmptyText = "No favorites yet",
+	Callback = function(tags) print("[Demo] Colors:", table.concat(tags, ", ")) end,
+})
+
+-- Accordion (collapsible content panels)
+local accordionSection = components:CreateSection({ Title = "Accordion" })
+accordionSection:CreateAccordion({
+	Title = "FAQ",
+	DefaultOpen = 1,
+	Items = {
+		{ Title = "What is Atlas?", Text = "A zero-asset, component-based UI library for Roblox built entirely from Instance graphs. No images, no models, no dependencies." },
+		{ Title = "How do I install it?", Text = "Option A: paste the 4 modules into ReplicatedStorage. Option B: use Rojo. Option C: single-file build from releases/." },
+		{ Title = "Is it free?", Text = "Yes — MIT licensed. Use it in any project, commercial or personal." },
+		{ Title = "Does it work on mobile?", Text = "Absolutely. Atlas adapts to phones, tablets, desktops and consoles automatically via the Device module." },
+	},
+})
+
+-- Breadcrumb
+local breadSection = components:CreateSection({ Title = "Breadcrumb" })
+local breadcrumb = breadSection:CreateBreadcrumb({
+	Items = { "Home", "Settings", "UI Settings", "Colors" },
+	Callback = function(crumb, index)
+		Atlas:Notify({ Title = "Navigation", Text = "You clicked: " .. crumb .. " (level " .. index .. ")", Duration = 2 })
+	end,
+})
+breadSection:CreateButton({
+	Title = "Change Path",
+	Callback = function()
+		breadcrumb:SetItems({ "Home", "Game", "Lobby", "Queue" })
+		Atlas:Notify({ Title = "Breadcrumb", Text = "Path updated.", Duration = 1.5 })
+	end,
+})
+
+-- Rating (star selector)
+local ratingSection = components:CreateSection({ Title = "Rating" })
+ratingSection:CreateRating({
+	Title = "Experience",
+	Default = 3,
+	Flag = "ExpRating",
+	Callback = function(stars)
+		local labels = { "Terrible", "Bad", "OK", "Good", "Excellent" }
+		local label = labels[stars] or "Not rated"
+		Atlas:SetStatusBarText("Rating: " .. stars .. "/5 — " .. label)
+	end,
+})
+ratingSection:CreateRating({
+	Title = "Difficulty",
+	Max = 4,
+	Default = 2,
+	Flag = "DiffRating",
+	Callback = function(v) print("[Demo] Difficulty rating:", v) end,
+})
+
+-- TimePicker
+local timeSection = components:CreateSection({ Title = "Time Picker" })
+timeSection:CreateTimePicker({
+	Title = "Alarm Time",
+	DefaultHour = 8,
+	DefaultMinute = 30,
+	Use24Hour = true,
+	Flag = "AlarmTime",
+	Callback = function(h, m)
+		print(("[Demo] Alarm: %02d:%02d"):format(h, m))
+	end,
+})
+timeSection:CreateTimePicker({
+	Title = "Event Start",
+	DefaultHour = 14,
+	DefaultMinute = 0,
+	MinuteStep = 15,
+	Use24Hour = false,
+	Callback = function(h, m)
+		print(("[Demo] Event: %02d:%02d"):format(h, m))
+	end,
+})
+
+-- Toast Queue demo
+local queueSection = components:CreateSection({ Title = "Toast Queue" })
+queueSection:CreateLabel({
+	Text = "Plays multiple toasts sequentially, each after the previous one dismisses.",
+})
+queueSection:CreateButton({
+	Title = "Play 4-Toast Sequence",
+	Callback = function()
+		Atlas:QueueNotifications({
+			{ Title = "Step 1", Text = "Connecting to server…", Duration = 1.5, AccentToken = "Accent" },
+			{ Title = "Step 2", Text = "Downloading assets…", Duration = 1.5 },
+			{ Title = "Step 3", Text = "Building world…", Duration = 1.5 },
+			{ Title = "Step 4", Text = "Ready to play!", Duration = 2, AccentToken = "Success" },
+		}, {
+			Gap = 0.2,
+			OnComplete = function()
+				Atlas:SetStatusBarText("Toast queue finished.")
+			end,
+		})
+	end,
+})
+
+-- Shortcuts & Status Bar demo
+local serviceSection = components:CreateSection({ Title = "Services" })
+serviceSection:CreateLabel({
+	Text = "Keyboard shortcuts: Ctrl+D toggles the status bar. "
+		.. "Ctrl+N sends a test notification.",
+})
+serviceSection:CreateToggle({
+	Title = "Status Bar",
+	Default = true,
+	Flag = "StatusBarVisible",
+	Callback = function(on) Atlas:SetStatusBarVisible(on) end,
+})
+serviceSection:CreateButton({
+	Title = "Update Status Text",
+	Callback = function()
+		Atlas:SetStatusBarText("Updated at " .. os.date("%H:%M:%S"))
+	end,
+})
+serviceSection:CreateLabel({
+	Text = "Shortcuts registered: " .. tostring(#Atlas:GetShortcuts())
+		.. " (updates after registrations below).",
+})
+
+--------------------------------------------------------------------
+-- Tab 4: Advanced
 --------------------------------------------------------------------
 local advanced = window:CreateTab({ Title = "Advanced" })
 
-local inputSection = advanced:CreateSection({ Title = "Inputs", Collapsible = true, Flag = "Sec_Inputs" })
+local inputSection = advanced:CreateSection({ Title = "Inputs", Icon = "⌨", Collapsible = true, Flag = "Sec_Inputs" })
 
 inputSection:CreateSegmented({
 	Title = "Targeting Mode",
@@ -748,9 +985,42 @@ Atlas:RegisterCommand({
 })
 
 
+--------------------------------------------------------------------
+-- Keyboard shortcuts (v2.14.0)
+--------------------------------------------------------------------
+Atlas:AddShortcut({
+	Name = "Toggle Status Bar",
+	Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.D },
+	Callback = function()
+		local visible = Atlas._statusBar and Atlas._statusBar.Visible
+		Atlas:SetStatusBarVisible(not visible)
+		Atlas:Notify({ Title = "Status Bar", Text = visible and "Hidden" or "Shown", Duration = 1.5 })
+	end,
+})
+Atlas:AddShortcut({
+	Name = "Test Notification",
+	Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.N },
+	Callback = function()
+		Atlas:Notify({ Title = "Shortcut", Text = "Ctrl+N fired!", Duration = 2, AccentToken = "Success" })
+	end,
+})
+Atlas:AddShortcut({
+	Name = "Quick Save",
+	Keys = { Enum.KeyCode.LeftControl, Enum.KeyCode.S },
+	Callback = function()
+		Atlas:SaveConfig("quicksave")
+		Atlas:SetStatusBarText("Quick-saved at " .. os.date("%H:%M:%S"))
+		Atlas:Notify({ Title = "Profiles", Text = "Quick-saved.", Duration = 1.5, AccentToken = "Success" })
+	end,
+})
+
+-- Status bar (v2.14.0): persistent info strip at the bottom of the screen.
+Atlas:SetStatusBar({ Text = "Ready — Atlas v" .. Atlas:GetVersion(), Accent = true })
+
 -- Registry stats for the About tab (all flags/commands exist by now).
-stats:SetText(("Registry — flags: %d  ·  palette commands: %d  ·  themes: %d"):format(
+stats:SetText(("Registry — flags: %d  ·  commands: %d  ·  themes: %d  ·  shortcuts: %d"):format(
 	Atlas:GetFlagCount(),
 	#Atlas:GetCommands(),
-	#Atlas:GetThemeNames()
+	#Atlas:GetThemeNames(),
+	#Atlas:GetShortcuts()
 ))

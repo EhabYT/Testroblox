@@ -2,6 +2,43 @@
 
 All notable changes to atlas-ui are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.16.0] — 2026-08-02
+
+### UI/UX Improvements
+- **Tab page fade transition**: switching tabs now plays a quick surface-colored overlay fade-out instead of an instant show/hide, giving page transitions a polished feel
+- **Scroll-to-top on tab switch**: every tab page resets its scroll position to the top when activated — no more landing in the middle of the previous scroll state
+- **Button descriptions**: `CreateButton{ Description = "..." }` adds a dimmed subtitle line below the title (the row grows taller to accommodate); same support on Toggle and Slider
+- **Disabled state**: `CreateButton{ Disabled = true }` and `CreateToggle{ Disabled = true }` — grayed-out rows that swallow clicks; live `handle:SetDisabled(on)` for runtime toggling
+- **Toggle hover feedback**: hovering the toggle pill swells the knob (16→18 px, same language as the slider), signaling it's interactive
+- **Control row hover highlight**: every `sectionRow`-based control (Toggle, Slider, Dropdown, Stepper, Switch, Rating, TimePicker, etc.) now brightens to the Hover token on mouse-over — subtle but consistent feedback across the library
+- **Section header icons**: `CreateSection{ Icon = "⚡" }` prepends a text icon before the uppercase title — zero-asset decoration for visual grouping
+- **Notification slide-in**: toasts now enter from +40 px to the right (in addition to the existing scale-up and fade), adding directional motion to the entrance
+- **Smarter tooltip positioning**: tooltips now use the mouse's X coordinate (clamped to the target width) instead of the target's center, so the tip appears where the user is looking; fallback to center on touch
+- Demo: Navigation, Movement and System sections use icons; Walk Speed slider, Auto Sprint toggle and navigation button show descriptions; disabled button showcase; live version in the About paragraph
+
+## [2.15.0] — 2026-08-02
+
+### Added
+- **ChipList component**: `CreateChipList{ Title, Default, MaxTags, Placeholder, EmptyText, Flag, Callback }` — inline removable tag pills with an add input; duplicates are rejected; handles expose `Add(tag)`, `Remove(tag)`, `Set(tags)`, `Get()`; flaggable for profiles
+- **Accordion component**: `CreateAccordion{ Title, Items, DefaultOpen, Exclusive, Callback }` — collapsible content panels (FAQ-style); each item has `Title` and rich `Text`; `Exclusive` mode (default) closes siblings on open; animated chevron rotation; handles expose `Open(index)` and `CloseAll()`
+- **Breadcrumb component**: `CreateBreadcrumb{ Items, Callback }` — clickable navigation path with accent-colored links and `›` separators; last crumb renders bold as the current location; `SetItems(list)` rebuilds the trail live
+- **Rating component**: `CreateRating{ Title, Max, Default, Flag, Callback }` — 1–N star selector with hover preview (filled ★ / empty ☆); clicking the active star deselects (goes to 0); theme-bound accent color; flaggable
+- **TimePicker component**: `CreateTimePicker{ Title, DefaultHour, DefaultMinute, MinuteStep, Use24Hour, Flag, Callback }` — hours and minutes with ± stepper buttons, wrapping at boundaries (23→0, 59→0); supports 12-hour AM/PM and 24-hour display; configurable minute step
+- **Toast queue service**: `Atlas:QueueNotifications(list, config?)` — plays a sequence of toasts one after the previous dismisses, with a configurable `Gap` between them; `OnComplete` fires when the last toast is done; each item supports the same fields as `Notify`
+- Demo: new Chip List, Accordion (FAQ), Breadcrumb, Rating, TimePicker and Toast Queue sections in the Components tab
+
+## [2.14.0] — 2026-08-02
+
+### Added
+- **Switch component**: `CreateSwitch{ Title, OnText, OffText, Default, Flag, Callback }` — a labeled two-state control with a sliding indicator and custom text for each state (e.g. "PvP"/"PvE", "On"/"Off"), distinct from Toggle's silent pill
+- **TextArea component**: `CreateTextArea{ Title, Placeholder, Height, MaxLength, Flag, Callback }` — multi-line text input with word wrap, configurable height, and optional live character counter with enforcement
+- **RangeSlider component**: `CreateRangeSlider{ Title, Min, Max, Step, DefaultMin, DefaultMax, Suffix, Flag, Callback }` — dual-thumb slider for selecting a min/max range; click proximity determines which knob moves; callback receives `(lo, hi)`
+- **RadioGroup component**: `CreateRadioGroup{ Title, Options, Default, Flag, Callback }` — vertical exclusive radio buttons with animated inner-dot selection, visually distinct from the horizontal Segmented control
+- **Keyboard shortcuts service**: `Atlas:AddShortcut{ Keys, Name, Callback }` — register global modifier+key combos (e.g. `{ Enum.KeyCode.LeftControl, Enum.KeyCode.S }`); returns a handle with `:Disconnect()` and `:SetEnabled(on)`; `Atlas:GetShortcuts()` lists active bindings
+- **Status bar service**: `Atlas:SetStatusBar{ Text, Accent, Visible }` — persistent bottom-edge strip with optional accent dot indicator, theme-bound; `Atlas:SetStatusBarText(s)` and `Atlas:SetStatusBarVisible(on)` for live updates
+- Demo: new **Components** tab showcasing all five new components plus the shortcut and status bar services; Ctrl+D toggles the status bar, Ctrl+N sends a test notification, Ctrl+S quick-saves; registry stats now include shortcut count
+- Demo: context-menu "Jump to Tab" submenu includes the new Components tab
+
 ## [2.13.0] — 2026-08-01
 
 ### Added

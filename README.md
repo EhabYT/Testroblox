@@ -5,7 +5,7 @@ Every element is built from plain `Instance` graphs at runtime — no images, no
 
 Rebuilt from scratch in **v2.0.0** around a single idea: **the interface adapts to the device** — phone, tablet/iPad, desktop, or console — automatically.
 
-> Current version: **2.13.0** — see [CHANGELOG.md](CHANGELOG.md).
+> Current version: **2.16.0** — see [CHANGELOG.md](CHANGELOG.md).
 
 ## Features
 
@@ -13,8 +13,8 @@ Rebuilt from scratch in **v2.0.0** around a single idea: **the interface adapts 
 - **Menu size follows the device**: `CreateWindow()` with no `Size` picks a per-class default, clamps explicit sizes to the safe viewport (notch/overscan margins), and never lets `size × UIScale` overflow the screen
 - **Rotate-safe**: turn a phone/iPad (or resize the window) and every open Atlas window re-clamps size and keeps its title bar reachable — live, via `ViewportSizeChanged`
 - Handhelds get automatic UIScale (1.25/1.15/1.1), compact sidebar, floating menu toggler, degraded keybind hints, and 44 px-friendly targets
-- 14 components: Button, Toggle, Slider (knob swell), Dropdown (searchable, `SetOptions`), MultiDropdown, Keybind, Input (numeric mode), Label, Paragraph, Segmented, Stepper, Progress, ColorPicker (live `ThemeToken`), Divider
-- Services: notifications (action buttons, grow-in, cap 8), tooltips (hover **and** long-press), prompts/alerts (optional text field), command palette (Ctrl+K), loading screen, watermark (FPS/ping), profiles (JSON, autosave)
+- 24 components: Button, Toggle, Switch, Slider (knob swell), RangeSlider (dual-thumb), Dropdown (searchable, `SetOptions`), MultiDropdown, Keybind, Input (numeric mode), TextArea (multi-line, char limit), Label, Paragraph, Segmented, Stepper, Progress, ColorPicker (live `ThemeToken`), RadioGroup, ChipList (removable tags), Accordion (collapsible panels), Breadcrumb (navigation path), Rating (star selector), TimePicker (h:m steppers), Divider
+- Services: notifications (action buttons, grow-in, cap 8, toast queue), tooltips (hover **and** long-press), prompts/alerts (optional text field), command palette (Ctrl+K), loading screen, watermark (FPS/ping), keyboard shortcuts (`AddShortcut`), status bar (persistent bottom strip), profiles (JSON, autosave)
 - Live theming everywhere: `SetToken` rebinds colors, corners **and fonts** instantly; Dark / Light / Midnight built in; themes export/import as JSON
 - Polished motion: press feedback on every control, tab accent rail, window pop-in, rotating chevrons
 - Zero assets, zero dependencies, MIT licensed
@@ -115,11 +115,16 @@ Atlas.Device.OnViewportChanged(function(v) ... end) -- rotation/resize
 | Tabs / Sections | `Window:CreateTab{...}`, `Tab:CreateSection{...}`, `Window:SelectTab(tabOrTitle)`, `Tab:SetBadge(v)` | `Collapsible = true`; badges on both levels: `Tab:SetBadge(v)` / `Section:SetBadge(v)` |
 | Inputs | `CreateButton/Toggle/Slider/Dropdown/Keybind/Input/Label` | All flaggable via `Flag = "..."`; Input `Numeric = true, Min, Max`; Dropdown `Searchable = true` + `Width` |
 | Inputs (tier 2) | `CreateSegmented/MultiDropdown/Stepper/Progress/ColorPicker/Divider` | ColorPicker: `ThemeToken = "Accent"` follows theme edits/resets; MultiDropdown supports `Searchable = true`; Progress has indeterminate `Marquee` mode (`handle:SetMarquee(on)`) |
+| Inputs (tier 3) | `CreateSwitch/TextArea/RangeSlider/RadioGroup` | Switch: labeled two-state with custom on/off text; TextArea: multi-line with `MaxLength`; RangeSlider: dual-thumb min/max with `DefaultMin`/`DefaultMax`; RadioGroup: exclusive vertical radios |
+| Inputs (tier 4) | `CreateChipList/Accordion/Breadcrumb/Rating/TimePicker` | ChipList: add/remove tags with input; Accordion: collapsible FAQ-style panels (exclusive or multi); Breadcrumb: clickable path; Rating: 1–N star selector with hover preview; TimePicker: h:m steppers (12/24h) |
 | Text | `CreateLabel{...}`, `CreateParagraph{ Title, Text }` | RichText + wrapping; `SetText`/`SetTitle` handles |
 | Overlays | `Atlas:Notify{...}`, `Atlas:AddTooltip(gui, text)`, `Atlas:Prompt/Alert{...}` | `Notify{ Action = {...} }`; `Prompt{ Input = true }` passes `(choice, text)`; `GetNotificationHistory()` = last 15 toasts; `ShowNotificationCenter()` modal panel with Clear All + per-row ×, toasts are swipe-to-dismiss |
 | Context menu | `Atlas:ContextMenu{ Items, Position? }`, `Atlas:AddContextMenu(gui, items\|fn)`, `Atlas:CloseContextMenu()` | Right-click / 0.55 s stationary long-press; items support `Disabled`, `Danger`, `"separator"` and `Submenu = {...}` (one level); auto-width, viewport-clamped; touch long-press sets `AtlasSuppressClick` on the target (swallow it in your own Activated handlers) |
 | Watermark | `Atlas:SetWatermark{...}`, `Atlas:SetWatermarkVisible(on)` | Draggable pill, live FPS (+ ping); `RememberLayout = true` persists the position in profiles |
 | Palette | `Atlas:RegisterCommand{Name, Category, Callback}` | `Ctrl+K` to open; optional `Priority` sorts results |
+| Toast queue | `Atlas:QueueNotifications(list, config?)` | Sequential batch: each toast plays after the prior dismisses; `Gap` between; `OnComplete` fires at end |
+| Shortcuts | `Atlas:AddShortcut{Keys, Name, Callback}`, `Atlas:GetShortcuts()` | Modifier+trigger combos; returns a handle with `:Disconnect()` and `:SetEnabled(on)` |
+| Status bar | `Atlas:SetStatusBar{Text, Accent, Visible}`, `SetStatusBarText(s)`, `SetStatusBarVisible(on)` | Persistent bottom strip; accent dot indicator; theme-bound |
 | Theming | `Atlas:SetTheme(name)`, `Atlas:GetThemeNames()`, `Theme.Register(name, overrides)` | Live rebind, no rebuild |
 | Live tokens | `Atlas:SetToken(name, value)`, `Atlas:GetToken(name)`, `Atlas:ResetTheme()`, `Atlas:OnThemeChanged(fn)` | Colors, corner radius **and fonts** rebind live |
 | Theme sharing | `Atlas:ExportTheme()`, `Atlas:ImportTheme(json[, name])` | Active theme ⇄ shareable JSON |
@@ -145,6 +150,15 @@ Every `Section:CreateX` supports `Flag = "..."` (profile persistence) and return
 | ColorPicker | `CreateColorPicker{ Title, Default }` | `ThemeToken` two-way sync, hex field |
 | Label | `CreateLabel{ Text, Dim?, TextSize? }` | `SetText` |
 | Paragraph | `CreateParagraph{ Title, Text }` | `SetTitle`/`SetText` |
+| Switch | `CreateSwitch{ Title, OnText, OffText, Default }` | labeled two-state with sliding indicator |
+| TextArea | `CreateTextArea{ Title, Placeholder, Height, MaxLength }` | multi-line, char counter |
+| RangeSlider | `CreateRangeSlider{ Title, Min, Max, Step, DefaultMin, DefaultMax }` | dual-thumb min/max |
+| RadioGroup | `CreateRadioGroup{ Title, Options, Default }` | exclusive vertical radios |
+| ChipList | `CreateChipList{ Title, Default, MaxTags, Placeholder }` | add/remove tags, `Add`/`Remove` handles |
+| Accordion | `CreateAccordion{ Title, Items, DefaultOpen, Exclusive }` | collapsible panels, `Open`/`CloseAll` |
+| Breadcrumb | `CreateBreadcrumb{ Items, Callback }` | clickable nav path, `SetItems` |
+| Rating | `CreateRating{ Title, Max, Default }` | star selector with hover preview |
+| TimePicker | `CreateTimePicker{ Title, DefaultHour, DefaultMinute, MinuteStep, Use24Hour }` | h:m steppers |
 | Divider | `CreateDivider()` | — |
 
 ## Persistence
