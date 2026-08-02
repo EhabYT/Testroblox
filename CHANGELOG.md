@@ -2,6 +2,17 @@
 
 All notable changes to atlas-ui are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.15.0] — 2026-08-02
+
+### Added
+- **ChipList component**: `CreateChipList{ Title, Default, MaxTags, Placeholder, EmptyText, Flag, Callback }` — inline removable tag pills with an add input; duplicates are rejected; handles expose `Add(tag)`, `Remove(tag)`, `Set(tags)`, `Get()`; flaggable for profiles
+- **Accordion component**: `CreateAccordion{ Title, Items, DefaultOpen, Exclusive, Callback }` — collapsible content panels (FAQ-style); each item has `Title` and rich `Text`; `Exclusive` mode (default) closes siblings on open; animated chevron rotation; handles expose `Open(index)` and `CloseAll()`
+- **Breadcrumb component**: `CreateBreadcrumb{ Items, Callback }` — clickable navigation path with accent-colored links and `›` separators; last crumb renders bold as the current location; `SetItems(list)` rebuilds the trail live
+- **Rating component**: `CreateRating{ Title, Max, Default, Flag, Callback }` — 1–N star selector with hover preview (filled ★ / empty ☆); clicking the active star deselects (goes to 0); theme-bound accent color; flaggable
+- **TimePicker component**: `CreateTimePicker{ Title, DefaultHour, DefaultMinute, MinuteStep, Use24Hour, Flag, Callback }` — hours and minutes with ± stepper buttons, wrapping at boundaries (23→0, 59→0); supports 12-hour AM/PM and 24-hour display; configurable minute step
+- **Toast queue service**: `Atlas:QueueNotifications(list, config?)` — plays a sequence of toasts one after the previous dismisses, with a configurable `Gap` between them; `OnComplete` fires when the last toast is done; each item supports the same fields as `Notify`
+- Demo: new Chip List, Accordion (FAQ), Breadcrumb, Rating, TimePicker and Toast Queue sections in the Components tab
+
 ## [2.14.0] — 2026-08-02
 
 ### Added

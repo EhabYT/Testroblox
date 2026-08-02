@@ -20,7 +20,7 @@ local Device = require(script.Parent.Device)
 --------------------------------------------------------------------
 
 local Library = {
-	VERSION = "2.14.0",
+	VERSION = "2.15.0",
 	Theme = Theme,
 	Utility = Utility,
 	Device = Device,
@@ -4194,6 +4194,683 @@ function Section:CreateRadioGroup(config)
 	end
 	Library:_registerFlag(config.Flag, handle)
 	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: Chip / Tag List (inline removable tags)
+--------------------------------------------------------------------
+
+function Section:CreateChipList(config)
+	config = config or {}
+	local tags = {}
+	for _, v in ipairs(config.Default or {}) do
+		table.insert(tags, tostring(v))
+	end
+
+	local holder = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Parent = self._body,
+	}, { Create("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+
+	local title = Create("TextLabel", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 16),
+		Font = "@FontMedium", TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextColor3 = token("Text"),
+		Text = config.Title or "Tags",
+		Parent = holder,
+	})
+	T(title, "TextColor3", "Text")
+
+	local chipContainer = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		LayoutOrder = 1,
+		Parent = holder,
+	}, {
+		Create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Wraps = true,
+			Padding = UDim.new(0, 4),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	local function renderChips()
+		for _, child in ipairs(chipContainer:GetChildren()) do
+			if child:IsA("GuiObject") and not child:IsA("UIListLayout") then
+				child:Destroy()
+			end
+		end
+		for i, tag in ipairs(tags) do
+			local chip = Create("Frame", {
+				LayoutOrder = i,
+				Size = UDim2.new(0, 0, 0, 24),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundColor3 = token("SurfaceAlt"),
+				BorderSizePixel = 0,
+				Parent = chipContainer,
+			}, {
+				Create("UICorner", { CornerRadius = UDim.new(1, 0) }),
+				Create("UIPadding", { PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 6) }),
+				Create("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					Padding = UDim.new(0, 4),
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
+			})
+			T(chip, "BackgroundColor3", "SurfaceAlt")
+			Create("TextLabel", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(0, 0, 0, 24),
+				AutomaticSize = Enum.AutomaticSize.X,
+				Font = "@FontMedium", TextSize = 11,
+				TextColor3 = token("Text"),
+				Text = tag,
+				LayoutOrder = 1,
+				Parent = chip,
+			})
+			local removeBtn = Create("TextButton", {
+				Size = UDim2.new(0, 16, 0, 16),
+				BackgroundColor3 = token("Hover"),
+				BackgroundTransparency = 0.5,
+				AutoButtonColor = false,
+				Font = "@FontBold", TextSize = 10,
+				TextColor3 = token("TextDim"),
+				Text = "×",
+				LayoutOrder = 2,
+				Parent = chip,
+			}, { Create("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+			T(removeBtn, "BackgroundColor3", "Hover")
+			T(removeBtn, "TextColor3", "TextDim")
+			removeBtn.Activated:Connect(function()
+				local idx = table.find(tags, tag)
+				if idx then
+					table.remove(tags, idx)
+				end
+				renderChips()
+				safeCall(config.Callback, tags)
+			end)
+		end
+		-- Empty state
+		if #tags == 0 then
+			Create("TextLabel", {
+				BackgroundTransparency = 1,
+				Size = UDim2.new(0, 0, 0, 24),
+				AutomaticSize = Enum.AutomaticSize.X,
+				Font = "@Font", TextSize = 11,
+				TextColor3 = token("TextDim"),
+				Text = config.EmptyText or "No tags",
+				Parent = chipContainer,
+			})
+		end
+	end
+
+	-- Input row for adding new tags
+	local inputRow = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 26),
+		LayoutOrder = 2,
+		Parent = holder,
+	}, {
+		Create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 4),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+	local addBox = Create("TextBox", {
+		Size = UDim2.new(1, -60, 0, 26),
+		BackgroundColor3 = token("Surface"),
+		ClearTextOnFocus = false,
+		Font = "@Font", TextSize = 12,
+		TextColor3 = token("Text"),
+		PlaceholderColor3 = token("TextDim"),
+		PlaceholderText = config.Placeholder or "Add tag…",
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Text = "",
+		LayoutOrder = 1,
+		Parent = inputRow,
+	}, {
+		Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		Create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8) }),
+	})
+	T(addBox, "BackgroundColor3", "Surface")
+	T(addBox, "TextColor3", "Text")
+	T(addBox, "PlaceholderColor3", "TextDim")
+
+	local addBtn = Create("TextButton", {
+		Size = UDim2.new(0, 52, 0, 26),
+		BackgroundColor3 = token("Accent"),
+		AutoButtonColor = false,
+		Font = "@FontMedium", TextSize = 12,
+		TextColor3 = token("OnAccent"),
+		Text = "Add",
+		LayoutOrder = 2,
+		Parent = inputRow,
+	}, { Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+	T(addBtn, "BackgroundColor3", "Accent")
+	T(addBtn, "TextColor3", "OnAccent")
+	Utility.AddPressEffect(addBtn)
+
+	local function addTag()
+		local text = addBox.Text:match("^%s*(.-)%s*$") -- trim
+		if text == "" then
+			return
+		end
+		local maxTags = config.MaxTags or 20
+		if #tags >= maxTags then
+			return
+		end
+		if not table.find(tags, text) then
+			table.insert(tags, text)
+			renderChips()
+			safeCall(config.Callback, tags)
+		end
+		addBox.Text = ""
+	end
+
+	addBtn.Activated:Connect(addTag)
+	addBox.FocusLost:Connect(function(enterPressed)
+		if enterPressed then
+			addTag()
+		end
+	end)
+
+	renderChips()
+
+	local handle = { Root = holder }
+	function handle:Set(newTags)
+		tags = {}
+		for _, v in ipairs(newTags or {}) do
+			table.insert(tags, tostring(v))
+		end
+		renderChips()
+	end
+	function handle:Get()
+		return tags
+	end
+	function handle:Add(tag)
+		if type(tag) == "string" and tag ~= "" and not table.find(tags, tag) then
+			table.insert(tags, tag)
+			renderChips()
+		end
+	end
+	function handle:Remove(tag)
+		local idx = table.find(tags, tag)
+		if idx then
+			table.remove(tags, idx)
+			renderChips()
+		end
+	end
+	Library:_registerFlag(config.Flag, handle)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: Accordion (collapsible content panels)
+--------------------------------------------------------------------
+
+function Section:CreateAccordion(config)
+	config = config or {}
+	local items = config.Items or {}
+	assert(#items >= 1, "[Atlas] CreateAccordion requires at least one item")
+
+	local holder = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 0),
+		AutomaticSize = Enum.AutomaticSize.Y,
+		Parent = self._body,
+	}, { Create("UIListLayout", { Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder }) })
+
+	-- Optional accordion title
+	if config.Title then
+		Create("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 18),
+			Font = "@FontMedium", TextSize = 13,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = token("Text"),
+			Text = config.Title,
+			Parent = holder,
+		})
+	end
+
+	local openIndex = config.DefaultOpen -- nil = all closed; number = which to open
+	local panels = {}
+
+	for i, item in ipairs(items) do
+		local itemFrame = Create("Frame", {
+			LayoutOrder = i,
+			BackgroundColor3 = token("SurfaceAlt"),
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Parent = holder,
+		}, {
+			Create("UICorner", { CornerRadius = UDim.new(0, 6) }),
+		})
+		T(itemFrame, "BackgroundColor3", "SurfaceAlt")
+
+		local headerBtn = Create("TextButton", {
+			Size = UDim2.new(1, 0, 0, 32),
+			BackgroundTransparency = 1,
+			AutoButtonColor = false,
+			Font = "@FontMedium", TextSize = 12,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = token("Text"),
+			Text = item.Title or ("Item " .. i),
+			Parent = itemFrame,
+		}, {
+			Create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 30) }),
+		})
+		T(headerBtn, "TextColor3", "Text")
+
+		local chevron = Create("TextLabel", {
+			Name = "Chevron",
+			BackgroundTransparency = 1,
+			AnchorPoint = Vector2.new(1, 0.5),
+			Position = UDim2.new(1, -8, 0.5, 0),
+			Size = UDim2.new(0, 14, 0, 14),
+			Font = "@FontBold", TextSize = 12,
+			TextColor3 = token("TextDim"),
+			Text = "▾",
+			Rotation = (openIndex == i) and 0 or -90,
+			Parent = headerBtn,
+		})
+		T(chevron, "TextColor3", "TextDim")
+
+		local content = Create("Frame", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Visible = (openIndex == i),
+			Parent = itemFrame,
+		}, {
+			Create("UIPadding", {
+				PaddingTop = UDim.new(0, 0), PaddingBottom = UDim.new(0, 8),
+				PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12),
+			}),
+		})
+
+		local bodyLabel = Create("TextLabel", {
+			BackgroundTransparency = 1,
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Font = "@Font", TextSize = 12,
+			TextWrapped = true, RichText = true,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			TextColor3 = token("TextDim"),
+			Text = item.Text or "",
+			Parent = content,
+		})
+		T(bodyLabel, "TextColor3", "TextDim")
+
+		panels[i] = { frame = itemFrame, content = content, chevron = chevron }
+
+		headerBtn.Activated:Connect(function()
+			local isOpen = content.Visible
+			-- If Exclusive mode (default), close all others first.
+			if config.Exclusive ~= false then
+				for j, panel in ipairs(panels) do
+					if j ~= i and panel.content.Visible then
+						panel.content.Visible = false
+						Utility.Tween(panel.chevron, Utility.TweenFast, { Rotation = -90 })
+					end
+				end
+			end
+			content.Visible = not isOpen
+			Utility.Tween(chevron, Utility.TweenFast, { Rotation = content.Visible and 0 or -90 })
+		end)
+
+		headerBtn.MouseEnter:Connect(function()
+			Utility.Tween(headerBtn, Utility.TweenFast, { BackgroundTransparency = 0.5 })
+		end)
+		headerBtn.MouseLeave:Connect(function()
+			Utility.Tween(headerBtn, Utility.TweenFast, { BackgroundTransparency = 1 })
+		end)
+	end
+
+	local handle = { Root = holder }
+	function handle:Open(index)
+		if panels[index] then
+			if config.Exclusive ~= false then
+				for j, panel in ipairs(panels) do
+					if j ~= index then
+						panel.content.Visible = false
+						panel.chevron.Rotation = -90
+					end
+				end
+			end
+			panels[index].content.Visible = true
+			panels[index].chevron.Rotation = 0
+		end
+	end
+	function handle:CloseAll()
+		for _, panel in ipairs(panels) do
+			panel.content.Visible = false
+			panel.chevron.Rotation = -90
+		end
+	end
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: Breadcrumb (navigation path indicator)
+--------------------------------------------------------------------
+
+function Section:CreateBreadcrumb(config)
+	config = config or {}
+	local crumbs = config.Items or { "Home" }
+
+	local row = Create("Frame", {
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, 24),
+		Parent = self._body,
+	}, {
+		Create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 0),
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	local handle = { Root = row }
+
+	local function rebuild(items)
+		for _, child in ipairs(row:GetChildren()) do
+			if child:IsA("GuiObject") and not child:IsA("UIListLayout") then
+				child:Destroy()
+			end
+		end
+		for i, crumb in ipairs(items) do
+			local isLast = (i == #items)
+			local btn = Create("TextButton", {
+				LayoutOrder = i * 2 - 1,
+				Size = UDim2.new(0, 0, 0, 24),
+				AutomaticSize = Enum.AutomaticSize.X,
+				BackgroundTransparency = 1,
+				AutoButtonColor = false,
+				Font = isLast and "@FontBold" or "@Font",
+				TextSize = 12,
+				TextColor3 = isLast and token("Text") or token("Accent"),
+				Text = tostring(crumb),
+				Parent = row,
+			}, {
+				Create("UIPadding", { PaddingLeft = UDim.new(0, 2), PaddingRight = UDim.new(0, 2) }),
+			})
+			if not isLast then
+				btn.Activated:Connect(function()
+					safeCall(config.Callback, crumb, i)
+				end)
+				btn.MouseEnter:Connect(function()
+					Utility.Tween(btn, Utility.TweenFast, { TextColor3 = token("Text") })
+				end)
+				btn.MouseLeave:Connect(function()
+					Utility.Tween(btn, Utility.TweenFast, { TextColor3 = token("Accent") })
+				end)
+				-- Separator
+				Create("TextLabel", {
+					LayoutOrder = i * 2,
+					Size = UDim2.new(0, 16, 0, 24),
+					BackgroundTransparency = 1,
+					Font = "@Font", TextSize = 12,
+					TextColor3 = token("TextDim"),
+					Text = "›",
+					Parent = row,
+				})
+			end
+		end
+	end
+	rebuild(crumbs)
+
+	function handle:SetItems(items)
+		crumbs = items or {}
+		rebuild(crumbs)
+	end
+	function handle:Get()
+		return crumbs
+	end
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: Rating (star selector, 1–N)
+--------------------------------------------------------------------
+
+function Section:CreateRating(config)
+	config = config or {}
+	local maxStars = config.Max or 5
+	local current = Utility.Clamp(config.Default or 0, 0, maxStars)
+
+	local row = sectionRow(self, 34)
+	rowLabel(row, config.Title or "Rating", maxStars * 24 + 10)
+
+	local starGroup = Create("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.new(0, maxStars * 24, 0, 24),
+		BackgroundTransparency = 1,
+		Parent = row,
+	}, {
+		Create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 2),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	local stars = {}
+	local function repaint()
+		for i, star in ipairs(stars) do
+			star.Text = i <= current and "★" or "☆"
+			star.TextColor3 = i <= current and token("Accent") or token("TextDim")
+		end
+	end
+
+	for i = 1, maxStars do
+		local star = Create("TextButton", {
+			LayoutOrder = i,
+			Size = UDim2.new(0, 22, 0, 24),
+			BackgroundTransparency = 1,
+			AutoButtonColor = false,
+			Font = "@FontBold", TextSize = 18,
+			TextColor3 = i <= current and token("Accent") or token("TextDim"),
+			Text = i <= current and "★" or "☆",
+			Parent = starGroup,
+		})
+		star.Activated:Connect(function()
+			-- Clicking the same star again deselects (goes to 0).
+			if current == i then
+				current = 0
+			else
+				current = i
+			end
+			repaint()
+			safeCall(config.Callback, current)
+		end)
+		star.MouseEnter:Connect(function()
+			-- Preview: fill stars up to hover point.
+			for j, s in ipairs(stars) do
+				s.Text = j <= i and "★" or "☆"
+				s.TextColor3 = j <= i and token("Accent") or token("TextDim")
+			end
+		end)
+		star.MouseLeave:Connect(function()
+			repaint()
+		end)
+		stars[i] = star
+	end
+	bind(repaint)
+
+	local handle = { Root = row }
+	function handle:Set(v, silent)
+		current = Utility.Clamp(math.floor(tonumber(v) or 0), 0, maxStars)
+		repaint()
+		if not silent then
+			safeCall(config.Callback, current)
+		end
+	end
+	function handle:Get()
+		return current
+	end
+	Library:_registerFlag(config.Flag, handle)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Component: TimePicker (hours : minutes with steppers)
+--------------------------------------------------------------------
+
+function Section:CreateTimePicker(config)
+	config = config or {}
+	local hour = Utility.Clamp(config.DefaultHour or 12, 0, 23)
+	local minute = Utility.Clamp(config.DefaultMinute or 0, 0, 59)
+	local minuteStep = config.MinuteStep or 1
+	local use24h = config.Use24Hour ~= false
+
+	local row = sectionRow(self, 34)
+	rowLabel(row, config.Title or "Time", 160)
+
+	local group = Create("Frame", {
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.new(0, 148, 0, 24),
+		BackgroundTransparency = 1,
+		Parent = row,
+	}, {
+		Create("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, 2),
+			VerticalAlignment = Enum.VerticalAlignment.Center,
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+	})
+
+	local function formatTime()
+		if use24h then
+			return string.format("%02d:%02d", hour, minute)
+		else
+			local h12 = hour % 12
+			if h12 == 0 then h12 = 12 end
+			local ampm = hour < 12 and "AM" or "PM"
+			return string.format("%d:%02d %s", h12, minute, ampm)
+		end
+	end
+
+	local function smallBtn(symbol, order)
+		local b = Create("TextButton", {
+			LayoutOrder = order,
+			Size = UDim2.new(0, 22, 0, 24),
+			BackgroundColor3 = token("Surface"),
+			AutoButtonColor = false,
+			Font = "@FontBold", TextSize = 13,
+			TextColor3 = token("Text"), Text = symbol,
+			Parent = group,
+		}, { Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+		T(b, "BackgroundColor3", "Surface")
+		T(b, "TextColor3", "Text")
+		Utility.AddPressEffect(b)
+		return b
+	end
+
+	local display = Create("TextLabel", {
+		LayoutOrder = 3,
+		Size = UDim2.new(0, 70, 0, 24),
+		BackgroundColor3 = token("SurfaceAlt"),
+		BorderSizePixel = 0,
+		Font = "@FontMedium", TextSize = 13,
+		TextColor3 = token("Text"),
+		Text = formatTime(),
+		Parent = group,
+	}, { Create("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+	T(display, "BackgroundColor3", "SurfaceAlt")
+	T(display, "TextColor3", "Text")
+
+	local function fire()
+		display.Text = formatTime()
+		safeCall(config.Callback, hour, minute)
+	end
+
+	local hDown = smallBtn("−", 1)
+	local hUp = smallBtn("+", 2)
+	-- display is order 3
+	local mDown = smallBtn("−", 4)
+	local mUp = smallBtn("+", 5)
+
+	hDown.Activated:Connect(function()
+		hour = (hour - 1) % 24
+		fire()
+	end)
+	hUp.Activated:Connect(function()
+		hour = (hour + 1) % 24
+		fire()
+	end)
+	mDown.Activated:Connect(function()
+		minute = (minute - minuteStep) % 60
+		fire()
+	end)
+	mUp.Activated:Connect(function()
+		minute = (minute + minuteStep) % 60
+		fire()
+	end)
+
+	local handle = { Root = row }
+	function handle:Set(h, m, silent)
+		hour = Utility.Clamp(math.floor(tonumber(h) or hour), 0, 23)
+		minute = Utility.Clamp(math.floor(tonumber(m) or minute), 0, 59)
+		display.Text = formatTime()
+		if not silent then
+			safeCall(config.Callback, hour, minute)
+		end
+	end
+	function handle:Get()
+		return hour, minute
+	end
+	Library:_registerFlag(config.Flag, handle)
+	return handle
+end
+
+--------------------------------------------------------------------
+-- Service: Toast Queue (sequential batch notifications)
+--------------------------------------------------------------------
+
+-- Atlas:QueueNotifications({ {Title, Text, Duration}, ... })
+-- Plays each toast one after the previous dismisses, with a small gap.
+function Library:QueueNotifications(list, config)
+	assert(type(list) == "table" and #list >= 1,
+		"[Atlas] QueueNotifications requires a non-empty list")
+	config = config or {}
+	local gap = config.Gap or 0.3
+	local index = 0
+	local function playNext()
+		index = index + 1
+		if index > #list then
+			safeCall(config.OnComplete)
+			return
+		end
+		local item = list[index]
+		if type(item) ~= "table" then
+			playNext()
+			return
+		end
+		local duration = item.Duration or 3
+		self:Notify({
+			Title = item.Title or "Notification",
+			Text = item.Text or "",
+			Duration = duration,
+			AccentToken = item.AccentToken,
+			Action = item.Action,
+		})
+		task.delay(duration + gap, playNext)
+	end
+	playNext()
 end
 
 --------------------------------------------------------------------

@@ -454,8 +454,122 @@ radioSection:CreateRadioGroup({
 	Callback = function(v) print("[Demo] Region:", v) end,
 })
 
+-- Chip / Tag List
+local chipSection = components:CreateSection({ Title = "Chip List" })
+chipSection:CreateChipList({
+	Title = "Filters",
+	Default = { "Online", "Verified" },
+	Placeholder = "Add filter…",
+	MaxTags = 8,
+	Flag = "Filters",
+	Callback = function(tags)
+		print("[Demo] Filters:", table.concat(tags, ", "))
+	end,
+})
+chipSection:CreateChipList({
+	Title = "Favorite Colors",
+	Default = { "Red", "Blue", "Green" },
+	Placeholder = "Add color…",
+	EmptyText = "No favorites yet",
+	Callback = function(tags) print("[Demo] Colors:", table.concat(tags, ", ")) end,
+})
+
+-- Accordion (collapsible content panels)
+local accordionSection = components:CreateSection({ Title = "Accordion" })
+accordionSection:CreateAccordion({
+	Title = "FAQ",
+	DefaultOpen = 1,
+	Items = {
+		{ Title = "What is Atlas?", Text = "A zero-asset, component-based UI library for Roblox built entirely from Instance graphs. No images, no models, no dependencies." },
+		{ Title = "How do I install it?", Text = "Option A: paste the 4 modules into ReplicatedStorage. Option B: use Rojo. Option C: single-file build from releases/." },
+		{ Title = "Is it free?", Text = "Yes — MIT licensed. Use it in any project, commercial or personal." },
+		{ Title = "Does it work on mobile?", Text = "Absolutely. Atlas adapts to phones, tablets, desktops and consoles automatically via the Device module." },
+	},
+})
+
+-- Breadcrumb
+local breadSection = components:CreateSection({ Title = "Breadcrumb" })
+local breadcrumb = breadSection:CreateBreadcrumb({
+	Items = { "Home", "Settings", "UI Settings", "Colors" },
+	Callback = function(crumb, index)
+		Atlas:Notify({ Title = "Navigation", Text = "You clicked: " .. crumb .. " (level " .. index .. ")", Duration = 2 })
+	end,
+})
+breadSection:CreateButton({
+	Title = "Change Path",
+	Callback = function()
+		breadcrumb:SetItems({ "Home", "Game", "Lobby", "Queue" })
+		Atlas:Notify({ Title = "Breadcrumb", Text = "Path updated.", Duration = 1.5 })
+	end,
+})
+
+-- Rating (star selector)
+local ratingSection = components:CreateSection({ Title = "Rating" })
+ratingSection:CreateRating({
+	Title = "Experience",
+	Default = 3,
+	Flag = "ExpRating",
+	Callback = function(stars)
+		local labels = { "Terrible", "Bad", "OK", "Good", "Excellent" }
+		local label = labels[stars] or "Not rated"
+		Atlas:SetStatusBarText("Rating: " .. stars .. "/5 — " .. label)
+	end,
+})
+ratingSection:CreateRating({
+	Title = "Difficulty",
+	Max = 4,
+	Default = 2,
+	Flag = "DiffRating",
+	Callback = function(v) print("[Demo] Difficulty rating:", v) end,
+})
+
+-- TimePicker
+local timeSection = components:CreateSection({ Title = "Time Picker" })
+timeSection:CreateTimePicker({
+	Title = "Alarm Time",
+	DefaultHour = 8,
+	DefaultMinute = 30,
+	Use24Hour = true,
+	Flag = "AlarmTime",
+	Callback = function(h, m)
+		print(("[Demo] Alarm: %02d:%02d"):format(h, m))
+	end,
+})
+timeSection:CreateTimePicker({
+	Title = "Event Start",
+	DefaultHour = 14,
+	DefaultMinute = 0,
+	MinuteStep = 15,
+	Use24Hour = false,
+	Callback = function(h, m)
+		print(("[Demo] Event: %02d:%02d"):format(h, m))
+	end,
+})
+
+-- Toast Queue demo
+local queueSection = components:CreateSection({ Title = "Toast Queue" })
+queueSection:CreateLabel({
+	Text = "Plays multiple toasts sequentially, each after the previous one dismisses.",
+})
+queueSection:CreateButton({
+	Title = "Play 4-Toast Sequence",
+	Callback = function()
+		Atlas:QueueNotifications({
+			{ Title = "Step 1", Text = "Connecting to server…", Duration = 1.5, AccentToken = "Accent" },
+			{ Title = "Step 2", Text = "Downloading assets…", Duration = 1.5 },
+			{ Title = "Step 3", Text = "Building world…", Duration = 1.5 },
+			{ Title = "Step 4", Text = "Ready to play!", Duration = 2, AccentToken = "Success" },
+		}, {
+			Gap = 0.2,
+			OnComplete = function()
+				Atlas:SetStatusBarText("Toast queue finished.")
+			end,
+		})
+	end,
+})
+
 -- Shortcuts & Status Bar demo
-local serviceSection = components:CreateSection({ Title = "Services (v2.14.0)" })
+local serviceSection = components:CreateSection({ Title = "Services" })
 serviceSection:CreateLabel({
 	Text = "Keyboard shortcuts: Ctrl+D toggles the status bar. "
 		.. "Ctrl+N sends a test notification.",
